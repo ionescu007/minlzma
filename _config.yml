@@ -1,1 +1,6 @@
 theme: jekyll-theme-minimal
+title: minlzma
+description: Minimal LZMA Project
+use_logo: true
+logo: minlzma.png
+show_downloads: "true"
