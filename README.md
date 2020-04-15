@@ -4,7 +4,7 @@ The Minimal LZMA (`minlzma`) project aims to provide a minimalistic, cross-platf
 
 # External Interface
 
-```
+~~~ c
 bool
 XzDecode (
     uint8_t* InputBuffer,
@@ -12,7 +12,7 @@ XzDecode (
     uint8_t* OutputBuffer,
     uint32_t* OutputSize
     );
-```
+~~~
 
 # Limitations and Restrictions
 
