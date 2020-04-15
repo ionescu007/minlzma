@@ -54,3 +54,35 @@ This is a [link][google-es]{:hreflang="es"} in Spanish.
 
 [link]: https://google.com
 [google-es]: https://google.es
+
+Center-aligned
+{: .alert .alert-info .text-center}
+Paragraph markup:
+Center-aligned
+{: .text-center}
+Heading markup:
+### Center-aligned
+{: .text-center}
+Align to the right
+Right-aligned
+Right-aligned
+{: .alert .alert-info .text-right}
+Justify
+Justified
+Justified
+{: .alert .alert-info .text-justify}
+
+Mix HTML + Markdown Markup
+Mixing HTML markup with markdown is something almost "unthinkable" to someone used to regular markdown. And it's all over this document!
+Use the following markup at the beginning of your document:
+{::options parse_block_html="true" /}
+And feel free to mix everything up:
+Something in **markdown**.
+
+<p>Then an HTML tag with crazy **markup** _all over_ the place!</p>
+Output
+Something in markdown.
+Then an HTML tag with crazy markup all over the place!
+You can close the markup parser tag at any point, if you want to:
+{::options parse_block_html="false" /}
+
