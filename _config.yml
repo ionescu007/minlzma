@@ -4,3 +4,4 @@ description: Minimal LZMA Project
 use_logo: true
 logo: minlzma.png
 show_downloads: "true"
+markdown: kramdown
