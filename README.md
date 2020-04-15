@@ -26,3 +26,31 @@ In order to provide its vast simplicity, fast performance, minimal source, and s
 
 * `MINLZ_META_CHECKS` -- This option configures whether or nor the input files should be fully trusted to conform to the requirements of `minlzlib` and do not require checking the various stream header flags or block header flags and other attributes. Additionally, the index and stream footer are completely ignored. This mode results in a sub-10KB library that can decode 100MB/s on a ~3.6GHz single-processor. This is only recommended if the input file is wrapped or delivered in a cryptographically tamper-proof secure channel or container (such as a signed hash).
 
+Paragraph
+{: .class .class-1 .class-2}
+
+Paragraph
+{: #custom-id}
+
+Paragraph
+{: .class .class-1 #custom-id-1}
+
+## Heading
+{: .class .class-1 #custom-id-2}
+
+Paragraph
+{: .class #custom-id-3 style="padding-top:0" key="value"}
+
+## Heading {#hello}
+
+List:
+
+- {: .class} List item with custom class
+- {:#id} List item with custom id
+
+To a [link]{: #link}, in-line.
+
+This is a [link][google-es]{:hreflang="es"} in Spanish.
+
+[link]: https://google.com
+[google-es]: https://google.es
