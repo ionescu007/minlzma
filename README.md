@@ -31,4 +31,17 @@ In order to provide its vast simplicity, fast performance, minimal source, and s
 TODO
 
 # Build Instructions
-TODO
+Within Visual Studio 2019, you can use File->Open->CMake and point it at the top-level `CMakeFiles.txt`, and choose either the `win-amd64` target or the `win-release-amd64` target. The former builds a binary with no optimizations, the later builds a fully optimized binary (for speed) with debug symbols.
+
+If you use WSL, ...
+
+For Linux native builds, ...
+
+# Acknowledgments
+The author would like to thank the shoulders of the following giants, whose code, documentation, and writing was monumental in this effort:
+
+* Antonio Diaz Diaz -- author of lzip
+* Charles Bloom -- author of oodle
+* Fabian Giesen -- author of oodle
+* Igor Pavlov -- author of 7-zip
+* Lasse Collin -- author of xzutils
