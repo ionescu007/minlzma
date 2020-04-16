@@ -36,7 +36,7 @@ main (
 	{
 		printf("Usage: minlzdec [INPUT FILE] [OUTPUT FILE]\n");
 		printf("Decompress INPUT FILE in the .xz format into OUTPUT FILE.\n");
-		_set_errno(EINVAL);
+		errno = EINVAL;
 		goto Cleanup;
 	}
 
@@ -73,7 +73,7 @@ main (
 	decodeResult = XzDecode(inputBuffer, size, outputBuffer, &size);
 	if (decodeResult == false)
 	{
-		_set_errno(ENOTSUP);
+		errno = ENOTSUP;
 		goto Cleanup;
 	}
 	printf("decode result: %d %d\n", decodeResult, size);
@@ -89,7 +89,7 @@ main (
 	{
 		goto Cleanup;
 	}
-	_set_errno(0);
+	errno = 0;
 
 Cleanup:
 	if (outputBuffer != NULL)
