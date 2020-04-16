@@ -5,6 +5,21 @@ The Minimal LZMA (`minlzma`) project aims to provide a minimalistic, cross-platf
 # External Interface
 
 ~~~ c
+/**
+ * @brief        Decompresses an XZ stream from InputBuffer into OutputBuffer.
+ * @description  The XZ stream must contain a single block with an LZMA2 filter
+ *               and no BJC2 filters, using default LZMA properties, and using
+ *               either CRC32 or None as the checksum type.
+ *
+ * @param[in]    InputBuffer - A fully formed buffer containing the XZ stream.
+ * @param[in]    InputSize - The size of the input buffer.
+ * @param[in]    OutputBuffer - A fully allocated buffer to receive the outout.
+ * @param[inout] OutputSize - On input, the size of the buffer. On output, the
+ *               size of the decompressed result.
+ *
+ * @return       true - The input buffer was fully decompressed in OutputBuffer
+ *               false - A failure occured during the decompression process
+ */
 bool
 XzDecode (
     uint8_t* InputBuffer,
@@ -20,11 +35,11 @@ In order to provide its vast simplicity, fast performance, minimal source, and s
 * The entire input stream must be available (multi-call/streaming mode are not supported)
 * The entire output buffer must be allocated with a fixed size
 * The XZ file must have a single stream, with a single block (with a single dictionary/properties reset)
-* The LZMA properties must be `lc = 3`, `pb = 2`, `lc = 0`
-* The block must only have compressed LZMA2 chunks (LZMA2 uncompressed chunks are not supported)
-*
+* The LZMA2 property byte must indicate the LZMA properties `lc = 3`, `pb = 2`, `lc = 0`
+* The XZ block must only have compressed LZMA2 chunks (LZMA2 uncompressed chunks are not supported)
+* The XZ block must not have the optional "compressed size" and/or "uncompressed size" VLI metadata
 
-Note that while these assumptions may seem overly restrictive, they correspond to the usual files produced by `xzutils`, `7-zip` when choosing XZ as the format, and the `Python` `LZMA` module.
+Note that while these assumptions may seem overly restrictive, they correspond to the usual files produced by `xzutils`, `7-zip` when choosing XZ as the format, and the `Python` `LZMA` module. Most encoders do not support the vast majority of XZ/LZMA2's purported capabilities, such as SHA256 or CRC64, multiple blocks, etc.
 
 # Testing (Linux)
 
