@@ -175,7 +175,7 @@ XzDecodeIndex (
     //
     // Make sure the index is not corrupt
     //
-    if (Crc32(Context->In.Buffer + indexStart, Container->IndexSize) != *pCrc32)
+    if (Crc32(indexStart, Container->IndexSize) != *pCrc32)
     {
         return false;
     }
@@ -241,6 +241,7 @@ XzDecodeStreamFooter (
 
 bool
 XzDecodeBlock (
+    uint8_t* OutputBuffer,
     uint32_t* BlockSize
     )
 {
@@ -266,20 +267,31 @@ XzDecodeBlock (
     Container->UncompressedBlockSize = *BlockSize;
 #endif
     //
-    // TAfter the block data, we need to pad to 32-bit alignment
+    // After the block data, we need to pad to 32-bit alignment
     //
     if (!BfAlign())
     {
         return false;
     }
-#ifdef MINLZ_META_CHECKS
+#if defined(MINLZ_INTEGRITY_CHECKS) || defined(MINLZ_META_CHECKS)
     //
-    // Finally, move past the size of the checksum, if any
+    // Finally, move past the size of the checksum if any, then compare it with
+    // with the actual CRC32 of the block, if integrity checks are enabled. If
+    // meta checks are enabled, update the block size so the index checking can
+    // validate it.
     //
     if (!BfSeek(Container->ChecksumSize, &inputEnd))
     {
         return false;
     }
+#endif
+#ifdef MINLZ_INTEGRITY_CHECKS
+    if (Crc32(OutputBuffer, *BlockSize) != *(uint32_t*)inputEnd)
+    {
+        return false;
+    }
+#endif
+#ifdef MINLZ_META_CHECKS
     Container->UnpaddedBlockSize += Container->ChecksumSize;
 #endif
     return true;
@@ -455,7 +467,7 @@ XzDecode (
     //
     // Decode the actual block
     //
-    if (!XzDecodeBlock(OutputSize))
+    if (!XzDecodeBlock(OutputBuffer, OutputSize))
     {
         return false;
     }

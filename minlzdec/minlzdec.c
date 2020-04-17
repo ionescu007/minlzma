@@ -43,6 +43,7 @@ main (
 	inputFile = fopen(Arguments[1], "rb");
 	if (inputFile == 0)
 	{
+		printf("Failed to open input file: %s\n", Arguments[1]);
 		goto Cleanup;
 	}
 
@@ -53,12 +54,14 @@ main (
 	inputBuffer = malloc(fileSize);
 	if (inputBuffer == NULL)
 	{
+		printf("Out of memory for allocating input buffer\n");
 		goto Cleanup;
 	}
 
 	sizeRead = fread(inputBuffer, 1, fileSize, inputFile);
 	if (sizeRead != fileSize)
 	{
+		printf("File read failed (%zd vs %zd bytes\n", sizeRead, fileSize);
 		goto Cleanup;
 	}
 
@@ -67,26 +70,31 @@ main (
 	outputBuffer = malloc(size);
 	if (outputBuffer == NULL)
 	{
+		printf("Out of memory for allocating output buffer\n");
 		goto Cleanup;
 	}
 
 	decodeResult = XzDecode(inputBuffer, size, outputBuffer, &size);
 	if (decodeResult == false)
 	{
+		printf("Decoding failed after %d bytes\n", size);
 		errno = ENOTSUP;
 		goto Cleanup;
 	}
-	printf("decode result: %d %d\n", decodeResult, size);
+
+	printf("Decompressed %d bytes\n", size);
 
 	outputFile = fopen(Arguments[2], "wb");
 	if (outputFile == 0)
 	{
+		printf("Failed to open output file: %s\n", Arguments[1]);
 		goto Cleanup;
 	}
 
 	fileSize = fwrite(outputBuffer, 1, size, outputFile);
 	if (fileSize != size)
 	{
+		printf("File write failed (%zd vs %d bytes\n", fileSize, size);
 		goto Cleanup;
 	}
 	errno = 0;
