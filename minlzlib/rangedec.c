@@ -76,8 +76,7 @@ typedef struct _RANGE_DECODER_STATE
     uint32_t Range;
     uint32_t Code;
 } RANGE_DECODER_STATE, *PRANGE_DECODER_STATE;
-RANGE_DECODER_STATE g_RcState;
-PRANGE_DECODER_STATE RcState = &g_RcState;
+RANGE_DECODER_STATE RcState;
 
 bool
 RcInitialize (
@@ -103,12 +102,12 @@ RcInitialize (
     // first byte outputted by the encoder is always going to be zero, so it is
     // ignored here.
     //
-    RcState->Range = (uint32_t)-1;
-    RcState->Code = 0;
+    RcState.Range = (uint32_t)-1;
+    RcState.Code = 0;
     for (i = 0; i < LZMA_RC_INIT_BYTES; i++)
     {
         BfRead(&rcByte);
-        RcState->Code = (RcState->Code << 8) | rcByte;
+        RcState.Code = (RcState.Code << 8) | rcByte;
     }
 
     //
@@ -118,8 +117,8 @@ RcInitialize (
     // become 0 exactly when the compressed chunk size has been fully consumed
     // by the decoder.
     //
-    BfSeek(0, &RcState->Start);
-    RcState->Limit = RcState->Start + *ChunkSize;
+    BfSeek(0, &RcState.Start);
+    RcState.Limit = RcState.Start + *ChunkSize;
     *ChunkSize -= LZMA_RC_INIT_BYTES;
     return true;
 }
@@ -135,7 +134,7 @@ RcCanRead (
     // input buffer yet.
     //
     BfSeek(0, &pos);
-    return pos <= RcState->Limit;
+    return pos <= RcState.Limit;
 }
 
 bool
@@ -150,8 +149,8 @@ RcIsComplete (
     // this occured (which should be equal to the compressed size).
     //
     BfSeek(0, &pos);
-    *BytesProcessed = (uint32_t)(pos - RcState->Start);
-    return (RcState->Code == 0);
+    *BytesProcessed = (uint32_t)(pos - RcState.Start);
+    return (RcState.Code == 0);
 }
 
 void
@@ -167,12 +166,12 @@ RcNormalize (
     // two options appear identical with the number of precision bits that we
     // have. In this cas, shift the state by a byte (8 bits) and read one more.
     //
-    if (RcState->Range < LZMA_RC_MIN_RANGE)
+    if (RcState.Range < LZMA_RC_MIN_RANGE)
     {
-        RcState->Range <<= 8;
-        RcState->Code <<= 8;
+        RcState.Range <<= 8;
+        RcState.Code <<= 8;
         BfRead(&rcByte);
-        RcState->Code |= rcByte;
+        RcState.Code |= rcByte;
     }
 }
 
@@ -225,16 +224,16 @@ RcIsBitSet (
     // the newly defined range (inclusive), then we produce a 1 and limit the
     // range to produce a new range and code for the next decoding pass.
     //
-    bound = (RcState->Range >> LZMA_RC_PROBABILITY_BITS) * *Probability;
-    if (RcState->Code < bound)
+    bound = (RcState.Range >> LZMA_RC_PROBABILITY_BITS) * *Probability;
+    if (RcState.Code < bound)
     {
-        RcState->Range = bound;
+        RcState.Range = bound;
         bit = 0;
     }
     else
     {
-        RcState->Range -= bound;
-        RcState->Code -= bound;
+        RcState.Range -= bound;
+        RcState.Code -= bound;
         bit = 1;
     }
 
@@ -262,14 +261,14 @@ RcIsFixedBitSet(
     // we can just shift by 1 (in other words, halving the range).
     //
     RcNormalize();
-    RcState->Range >>= 1;
-    if (RcState->Code < RcState->Range)
+    RcState.Range >>= 1;
+    if (RcState.Code < RcState.Range)
     {
         bit = 0;
     }
     else
     {
-        RcState->Code -= RcState->Range;
+        RcState.Code -= RcState.Range;
         bit = 1;
     }
     return bit;

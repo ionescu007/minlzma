@@ -60,7 +60,6 @@ Environment:
 #define LZMA_DISTANCE_SLOTS                 64
 #define LZMA_FIRST_CONTEXT_DISTANCE_SLOT    4
 #define LZMA_FIRST_FIXED_DISTANCE_SLOT      14
-#define LZMA_FIXED_ENCODED_DISTANCES        128
 #define LZMA_DISTANCE_ALIGN_BITS            4
 #define LZMA_DISTANCE_ALIGN_SLOTS           (1 << LZMA_DISTANCE_ALIGN_BITS)
 
@@ -101,4 +100,3 @@ typedef enum _LZMA_SEQUENCE_STATE
     LzmaNonlitRepState,
     LzmaMaxState
 } LZMA_SEQUENCE_STATE, * PLZMA_SEQUENCE_STATE;
-

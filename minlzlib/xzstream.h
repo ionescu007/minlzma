@@ -46,9 +46,6 @@ typedef enum _XZ_CHECK_TYPES
 //
 // This describes the first 12 bytes of any XZ container file / stream
 //
-#pragma warning(push)
-#pragma warning(disable:4201)
-#pragma warning(disable:4214)
 typedef struct _XZ_STREAM_HEADER
 {
     uint8_t Magic[6];
@@ -59,9 +56,9 @@ typedef struct _XZ_STREAM_HEADER
             uint8_t ReservedFlags;
             uint8_t CheckType : 4;
             uint8_t ReservedType : 4;
-        };
+        } s;
         uint16_t Flags;
-    };
+    } u;
     uint32_t Crc32;
 } XZ_STREAM_HEADER, * PXZ_STREAM_HEADER;
 static_assert(sizeof(XZ_STREAM_HEADER) == 12, "Invalid Stream Header Size");
@@ -80,9 +77,9 @@ typedef struct _XZ_STREAM_FOOTER
             uint8_t ReservedFlags;
             uint8_t CheckType : 4;
             uint8_t ReservedType : 4;
-        };
+        } s;
         uint16_t Flags;
-    };
+    } u;
     uint16_t Magic;
 } XZ_STREAM_FOOTER, * PXZ_STREAM_FOOTER;
 static_assert(sizeof(XZ_STREAM_FOOTER) == 12, "Invalid Stream Footer Size");
@@ -103,9 +100,9 @@ typedef struct _XZ_BLOCK_HEADER
             uint8_t Reserved : 4;
             uint8_t HasCompressedSize : 1;
             uint8_t HasUncompressedSize : 1;
-        };
+        } s;
         uint8_t Flags;
-    };
+    } u;
     struct
     {
         uint8_t Id;
@@ -116,12 +113,11 @@ typedef struct _XZ_BLOCK_HEADER
             {
                 uint8_t DictionarySize : 6;
                 uint8_t Reserved : 2;
-            };
+            } s;
             uint8_t Properties;
-        };
+        } u;
     } LzmaFlags;
     uint8_t Padding[3];
     uint32_t Crc32;
 } XZ_BLOCK_HEADER, * PXZ_BLOCK_HEADER;
 static_assert(sizeof(XZ_BLOCK_HEADER) == 12, "Invalid Block Header Size");
-#pragma warning(pop)

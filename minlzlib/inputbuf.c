@@ -39,8 +39,7 @@ typedef struct _BUFFER_STATE
     uint32_t Offset;
     uint32_t Size;
 } BUFFER_STATE, * PBUFFER_STATE;
-BUFFER_STATE g_In;
-PBUFFER_STATE In = &g_In;
+BUFFER_STATE In;
 
 bool
 BfAlign (
@@ -51,7 +50,7 @@ BfAlign (
     //
     // Keep reading until we reach 32-bit alignment. All bytes must be zero.
     //
-    while (In->Offset & 3)
+    while (In.Offset & 3)
     {
         if (!BfRead(&padByte) || (padByte != 0))
         {
@@ -71,13 +70,13 @@ BfSeek (
     // Make sure the input buffer has enough space to seek the desired size, if
     // it does, return the current position and then seek past the desired size
     //
-    if ((In->Offset + Length) > In->Size)
+    if ((In.Offset + Length) > In.Size)
     {
         *Bytes = 0;
         return false;
     }
-    *Bytes = &In->Buffer[In->Offset];
-    In->Offset += Length;
+    *Bytes = &In.Buffer[In.Offset];
+    In.Offset += Length;
     return true;
 }
 
@@ -108,7 +107,7 @@ BfInitialize (
     //
     // Save all the data in the context buffer state
     //
-    In->Buffer = InputBuffer;
-    In->Size = InputSize;
-    In->Offset = 0;
+    In.Buffer = InputBuffer;
+    In.Size = InputSize;
+    In.Offset = 0;
 }

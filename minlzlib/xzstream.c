@@ -31,6 +31,8 @@ Environment:
 #include "minlzlib.h"
 #include "xzstream.h"
 
+void __security_check_cookie(uintptr_t _StackCookie) { (void)(_StackCookie); }
+
 #ifdef MINLZ_META_CHECKS
 //
 // XZ Stream Container State
@@ -49,8 +51,7 @@ typedef struct _CONTAINER_STATE
     uint32_t UnpaddedBlockSize;
     uint32_t ChecksumSize;
 } CONTAINER_STATE, * PCONTAINER_STATE;
-CONTAINER_STATE g_Container;
-PCONTAINER_STATE Container = &g_Container;
+CONTAINER_STATE Container;
 #endif
 
 #ifdef MINLZ_META_CHECKS
@@ -137,7 +138,7 @@ XzDecodeIndex (
     //
     // Then the unpadded block size, which should match
     //
-    if (!XzDecodeVli(&vli) || (Container->UnpaddedBlockSize != vli))
+    if (!XzDecodeVli(&vli) || (Container.UnpaddedBlockSize != vli))
     {
         return false;
     }
@@ -145,7 +146,7 @@ XzDecodeIndex (
     //
     // Then the uncompressed block size, which should match
     //
-    if (!XzDecodeVli(&vli) || (Container->UncompressedBlockSize != vli))
+    if (!XzDecodeVli(&vli) || (Container.UncompressedBlockSize != vli))
     {
         return false;
     }
@@ -162,7 +163,7 @@ XzDecodeIndex (
     // Store the index size with padding to validate the footer later
     //
     BfSeek(0, &indexEnd);
-    Container->IndexSize = (uint32_t)(indexEnd - indexStart);
+    Container.IndexSize = (uint32_t)(indexEnd - indexStart);
 
     //
     // Read the CRC32, which is not part of the index size
@@ -175,7 +176,7 @@ XzDecodeIndex (
     //
     // Make sure the index is not corrupt
     //
-    if (Crc32(indexStart, Container->IndexSize) != *pCrc32)
+    if (Crc32(indexStart, Container.IndexSize) != *pCrc32)
     {
         return false;
     }
@@ -219,7 +220,7 @@ XzDecodeStreamFooter (
     //
     // Validate if the footer accurately describes the size of the index
     //
-    if (Container->IndexSize != (streamFooter->BackwardSize * 4))
+    if (Container.IndexSize != (streamFooter->BackwardSize * 4))
     {
         return false;
     }
@@ -262,9 +263,9 @@ XzDecodeBlock (
     }
 #ifdef MINLZ_META_CHECKS
     BfSeek(0, &inputEnd);
-    Container->UnpaddedBlockSize = Container->HeaderSize +
+    Container.UnpaddedBlockSize = Container.HeaderSize +
                                    (uint32_t)(inputEnd - inputStart);
-    Container->UncompressedBlockSize = *BlockSize;
+    Container.UncompressedBlockSize = *BlockSize;
 #endif
     //
     // After the block data, we need to pad to 32-bit alignment
@@ -280,11 +281,12 @@ XzDecodeBlock (
     // meta checks are enabled, update the block size so the index checking can
     // validate it.
     //
-    if (!BfSeek(Container->ChecksumSize, &inputEnd))
+    if (!BfSeek(Container.ChecksumSize, &inputEnd))
     {
         return false;
     }
 #endif
+    (void)(OutputBuffer);
 #ifdef MINLZ_INTEGRITY_CHECKS
     if (Crc32(OutputBuffer, *BlockSize) != *(uint32_t*)inputEnd)
     {
@@ -292,7 +294,7 @@ XzDecodeBlock (
     }
 #endif
 #ifdef MINLZ_META_CHECKS
-    Container->UnpaddedBlockSize += Container->ChecksumSize;
+    Container.UnpaddedBlockSize += Container.ChecksumSize;
 #endif
     return true;
 }
@@ -335,7 +337,7 @@ XzDecodeStreamHeader (
     //
     // Remember that a checksum might come at the end of the block later
     //
-    Container->ChecksumSize = streamHeader->CheckType * 4;
+    Container.ChecksumSize = streamHeader->CheckType * 4;
 #endif
 #ifdef MINLZ_INTEGRITY_CHECKS
     //
@@ -370,8 +372,8 @@ XzDecodeBlockHeader (
     //
     // Validate that the size of the header is what we expect
     //
-    Container->HeaderSize = (blockHeader->Size + 1) * 4;
-    if (Container->HeaderSize != sizeof(*blockHeader))
+    Container.HeaderSize = (blockHeader->Size + 1) * 4;
+    if (Container.HeaderSize != sizeof(*blockHeader))
     {
         return false;
     }
@@ -425,7 +427,7 @@ XzDecodeBlockHeader (
     // Compute the header's CRC32 and make sure it's not corrupted
     //
     if (Crc32(blockHeader,
-              Container->HeaderSize - sizeof(blockHeader->Crc32)) !=
+              Container.HeaderSize - sizeof(blockHeader->Crc32)) !=
         blockHeader->Crc32)
     {
         return false;

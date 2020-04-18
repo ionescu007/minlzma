@@ -42,8 +42,7 @@ typedef struct _DICTIONARY_STATE
     uint32_t Limit;
     uint32_t Size;
 } DICTIONARY_STATE, *PDICTIONARY_STATE;
-DICTIONARY_STATE g_Dictionary;
-PDICTIONARY_STATE Dictionary = &g_Dictionary;
+DICTIONARY_STATE Dictionary;
 
 void
 DtInitialize (
@@ -54,9 +53,9 @@ DtInitialize (
     //
     // Initialize the buffer and reset the position
     //
-    Dictionary->Buffer = HistoryBuffer;
-    Dictionary->Offset = 0;
-    Dictionary->Size = Size;
+    Dictionary.Buffer = HistoryBuffer;
+    Dictionary.Offset = 0;
+    Dictionary.Size = Size;
 }
 
 bool
@@ -68,12 +67,12 @@ DtSetLimit (
     // Make sure that the passed in dictionary limit fits within the size, and
     // then set this as the new limit. Save the starting point (current offset)
     //
-    if ((Dictionary->Offset + Limit) > Dictionary->Size)
+    if ((Dictionary.Offset + Limit) > Dictionary.Size)
     {
         return false;
     }
-    Dictionary->Limit = Dictionary->Offset + Limit;
-    Dictionary->Start = Dictionary->Offset;
+    Dictionary.Limit = Dictionary.Offset + Limit;
+    Dictionary.Start = Dictionary.Offset;
     return true;
 }
 
@@ -85,8 +84,8 @@ DtIsComplete (
     //
     // Return bytes processed and if the dictionary has been fully written to
     //
-    *BytesProcessed = Dictionary->Offset - Dictionary->Start;
-    return (Dictionary->Offset == Dictionary->Limit);
+    *BytesProcessed = Dictionary.Offset - Dictionary.Start;
+    return (Dictionary.Offset == Dictionary.Limit);
 }
 
 bool
@@ -97,8 +96,8 @@ DtCanWrite (
     //
     // Return our position and make sure it's not beyond the uncompressed size
     //
-    *Position = Dictionary->Offset;
-    return (Dictionary->Offset < Dictionary->Limit);
+    *Position = Dictionary.Offset;
+    return (Dictionary.Offset < Dictionary.Limit);
 }
 
 uint8_t
@@ -110,11 +109,11 @@ DtGetSymbol (
     // If the dictionary is still empty, just return 0, otherwise, return the
     // symbol that is Distance bytes backward
     //
-    if (Distance > Dictionary->Offset)
+    if (Distance > Dictionary.Offset)
     {
         return 0;
     }
-    return Dictionary->Buffer[Dictionary->Offset - Distance];
+    return Dictionary.Buffer[Dictionary.Offset - Distance];
 }
 
 void
@@ -125,7 +124,7 @@ DtPutSymbol (
     //
     // Write the symbol and advance our position
     //
-    Dictionary->Buffer[Dictionary->Offset++] = Symbol;
+    Dictionary.Buffer[Dictionary.Offset++] = Symbol;
 }
 
 bool
@@ -138,7 +137,7 @@ DtRepeatSymbol (
     // Make sure we never get asked to write past the end of the dictionary,
     // then rewrite the stream of symbols forward into the dictionary
     //
-    if ((Length + Dictionary->Offset) > Dictionary->Limit)
+    if ((Length + Dictionary.Offset) > Dictionary.Limit)
     {
         return false;
     }

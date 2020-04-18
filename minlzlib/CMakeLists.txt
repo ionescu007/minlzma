@@ -1,6 +1,4 @@
-﻿cmake_minimum_required (VERSION 3.8)
-
-set(MINLZLIB_SOURCES "inputbuf.c" "dictbuf.c" "lzma2dec.c" "lzmadec.c" "rangedec.c" "xzstream.c" "lzmadec.h" "xzstream.h" "minlzlib.h")
+﻿set(MINLZLIB_SOURCES "inputbuf.c" "dictbuf.c" "lzma2dec.c" "lzmadec.c" "rangedec.c" "xzstream.c" "lzmadec.h" "xzstream.h" "minlzlib.h")
 add_library(minlz_obj OBJECT ${MINLZLIB_SOURCES})
 set_target_properties(minlz_obj PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
 
@@ -13,7 +11,12 @@ target_include_directories (minlz_obj PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(MSVC)
     set(CMAKE_C_STANDARD_LIBRARIES "")
-    target_link_libraries(minlz BufferOverflowU kernel32)
-    set(CMAKE_C_FLAGS_RELWITHDEBINFO "/Ox /Ob2 /Oi /Ot /Oy /GF /GL /Gy /MT /Zi")
-    set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "/LTCG /INCREMENTAL:NO /OPT:ICF /OPT:REF /NODEFAULTLIB /NOENTRY /DEBUG /EXPORT:XzDecode")
+    target_link_libraries(minlz)
+    set_property(TARGET minlz_obj PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    set_property(TARGET minlz PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    string(REGEX REPLACE "/W[1-3]" "/W4" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO "/WX /Ox /Ob2 /Oi /Ot /Oy /GF /Gy /MT /Zi /wd4214 /permissive-")
+    set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "/OPT:ICF /OPT:REF /NODEFAULTLIB /NOENTRY /DEBUG /EXPORT:XzDecode /EMITPOGOPHASEINFO /NOVCFEATURE /NOCOFFGRPINFO /DRIVER /MANIFEST:NO /PDBALTPATH:minlz.pdb /MERGE:.edata=.rdata")
+else()
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO "-Ofast -Wall -Werror")
 endif()

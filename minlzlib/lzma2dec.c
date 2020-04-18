@@ -39,8 +39,7 @@ typedef struct _CHUNK_STATE
     uint32_t UncompressedSize;
     uint16_t CompressedSize;
 } CHUNK_STATE, * PCHUNK_STATE;
-CHUNK_STATE g_ChunkState;
-PCHUNK_STATE ChunkState = &g_ChunkState;
+CHUNK_STATE ChunkState;
 
 bool
 Lz2DecodeChunk (
@@ -51,7 +50,7 @@ Lz2DecodeChunk (
     //
     // Make sure we always have space for the biggest possible LZMA sequence
     //
-    if (ChunkState->CompressedSize < LZMA_MAX_SEQUENCE_SIZE)
+    if (ChunkState.CompressedSize < LZMA_MAX_SEQUENCE_SIZE)
     {
         return false;
     }
@@ -70,7 +69,7 @@ Lz2DecodeChunk (
     // exactly where we expected it to.
     //
     if (!RcIsComplete(&bytesProcessed) ||
-        (bytesProcessed != ChunkState->CompressedSize))
+        (bytesProcessed != ChunkState.CompressedSize))
     {
         return false;
     }
@@ -80,7 +79,7 @@ Lz2DecodeChunk (
     // must be full now.
     //
     if (!DtIsComplete(&bytesProcessed) ||
-        (bytesProcessed != ChunkState->UncompressedSize))
+        (bytesProcessed != ChunkState.UncompressedSize))
     {
         return false;
     }
@@ -115,7 +114,7 @@ Lz2DecodeStream (
         //
         // We only support compressed streams, not uncompressed ones
         //
-        if (controlByte.Common.IsLzma == 0)
+        if (controlByte.u.Common.IsLzma == 0)
         {
             break;
         }
@@ -132,10 +131,10 @@ Lz2DecodeStream (
         // Decode the 1-based big-endian uncompressed size. It must fit into
         // the output buffer that was supplied.
         //
-        ChunkState->UncompressedSize = controlByte.Lzma.UncompressedSize << 16;
-        ChunkState->UncompressedSize += (*pInfoBytes)[0] << 8;
-        ChunkState->UncompressedSize += (*pInfoBytes)[1] + 1;
-        if (!DtSetLimit(ChunkState->UncompressedSize))
+        ChunkState.UncompressedSize = controlByte.u.Lzma.UncompressedSize << 16;
+        ChunkState.UncompressedSize += (*pInfoBytes)[0] << 8;
+        ChunkState.UncompressedSize += (*pInfoBytes)[1] + 1;
+        if (!DtSetLimit(ChunkState.UncompressedSize))
         {
             break;
         }
@@ -144,14 +143,14 @@ Lz2DecodeStream (
         // Decode the 1-based big-endian compressed size. It must fit into the
         // input buffer that was given, which RcInitialize will verify below.
         //
-        ChunkState->CompressedSize = (*pInfoBytes)[2] << 8;
-        ChunkState->CompressedSize += (*pInfoBytes)[3] + 1;
+        ChunkState.CompressedSize = (*pInfoBytes)[2] << 8;
+        ChunkState.CompressedSize += (*pInfoBytes)[3] + 1;
 
         //
         // Check if the full LZMA state needs to be reset, which must happen at
         // the start of stream. Other reset states are not supported.
         //
-        if (controlByte.Lzma.ResetState == Lzma2FullReset)
+        if (controlByte.u.Lzma.ResetState == Lzma2FullReset)
         {
             //
             // Read the LZMA properties and then initialize the decoder.
@@ -161,7 +160,7 @@ Lz2DecodeStream (
                 break;
             }
         }
-        else if (controlByte.Lzma.ResetState != Lzma2NoReset)
+        else if (controlByte.u.Lzma.ResetState != Lzma2NoReset)
         {
             break;
         }
@@ -171,7 +170,7 @@ Lz2DecodeStream (
         // coding decoder, and let it know how much input data exists. We've
         // already validated that this much space exists in the input buffer.
         //
-        if (!RcInitialize(&ChunkState->CompressedSize))
+        if (!RcInitialize(&ChunkState.CompressedSize))
         {
             break;
         }

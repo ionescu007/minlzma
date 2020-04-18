@@ -64,9 +64,6 @@ typedef enum _LZMA2_COMPRESSED_RESET_STATE
 //
 // This describes how an LZMA2 control byte can be parsed
 //
-#pragma warning(push)
-#pragma warning(disable:4201)
-#pragma warning(disable:4214)
 typedef union _LZMA2_CONTROL_BYTE
 {
     union
@@ -90,8 +87,7 @@ typedef union _LZMA2_CONTROL_BYTE
             uint8_t ResetState : 2;
             uint8_t IsLzma : 1;
         } Common;
-    };
+    } u;
     uint8_t Value;
 } LZMA2_CONTROL_BYTE;
 static_assert(sizeof(LZMA2_CONTROL_BYTE) == 1, "Invalid control byte size");
-#pragma warning(pop)

@@ -90,15 +90,14 @@ typedef struct _DECODER_STATE
             //
             uint16_t Match[LzmaMaxState][LZMA_POSITION_COUNT];
             uint16_t DistSlot[LZMA_FIRST_CONTEXT_DISTANCE_SLOT][LZMA_DISTANCE_SLOTS];
-            uint16_t Dist[LZMA_FIXED_ENCODED_DISTANCES - LZMA_FIRST_FIXED_DISTANCE_SLOT];
+            uint16_t Dist[(1 << 7) - LZMA_FIRST_FIXED_DISTANCE_SLOT];
             uint16_t Align[LZMA_DISTANCE_ALIGN_SLOTS];
             LENGTH_DECODER_STATE MatchLen;
         } BitModel;
         uint16_t RawProbabilities[LZMA_BIT_MODEL_SLOTS];
-    };
+    } u;
 } DECODER_STATE, *PDECODER_STATE;
-DECODER_STATE g_Decoder;
-PDECODER_STATE Decoder = &g_Decoder;
+DECODER_STATE Decoder;
 
 void
 LzSetLiteral (
@@ -197,7 +196,7 @@ LzGetLiteralSlot (
     // the dictionary. However, since "lp" is normally 0, we can omit this.
     //
     symbol = DtGetSymbol(1);
-    return Decoder->BitModel.Literal[symbol >> (8 - LZMA_LC)];
+    return Decoder.u.BitModel.Literal[symbol >> (8 - LZMA_LC)];
 }
 
 uint16_t*
@@ -214,15 +213,15 @@ LzGetDistSlot (
     // For lengths of 2, 3, 4 bytes, a dedicated set of distance slots is used.
     // For lengths of 5 bytes or above, a shared set of distance slots is used.
     //
-    if (Decoder->Len < (LZMA_FIRST_CONTEXT_DISTANCE_SLOT + LZMA_MIN_LENGTH))
+    if (Decoder.Len < (LZMA_FIRST_CONTEXT_DISTANCE_SLOT + LZMA_MIN_LENGTH))
     {
-        slotIndex = (uint8_t)(Decoder->Len - LZMA_MIN_LENGTH);
+        slotIndex = (uint8_t)(Decoder.Len - LZMA_MIN_LENGTH);
     }
     else
     {
         slotIndex = LZMA_FIRST_CONTEXT_DISTANCE_SLOT - 1;
     }
-    return Decoder->BitModel.DistSlot[slotIndex];
+    return Decoder.u.BitModel.DistSlot[slotIndex];
 }
 
 void
@@ -246,14 +245,14 @@ LzDecodeLiteral (
     // see LzDecodeMatched for more information.
     //
     probArray = LzGetLiteralSlot();
-    if (LzIsLiteral(Decoder->Sequence))
+    if (LzIsLiteral(Decoder.Sequence))
     {
 
         symbol = RcGetBitTree(probArray, (1 << 8));
     }
     else
     {
-        matchByte = DtGetSymbol(Decoder->Rep0 + 1);
+        matchByte = DtGetSymbol(Decoder.Rep0 + 1);
         symbol = RcDecodeMatchedBitTree(probArray, matchByte);
     }
 
@@ -261,13 +260,13 @@ LzDecodeLiteral (
     // Write the symbol and indicate that the last sequence was a literal
     //
     DtPutSymbol(symbol);
-    LzSetLiteral(&Decoder->Sequence);
+    LzSetLiteral(&Decoder.Sequence);
 }
 
 void
 LzDecodeLen (
     PLENGTH_DECODER_STATE LenState,
-    uint8_t Position
+    uint8_t PosBit
     )
 {
     uint16_t* probArray;
@@ -290,33 +289,33 @@ LzDecodeLen (
     // to use the Low trees, while {1, 0} tells us to use the Mid trees. Lastly
     // {1, 1} tells us to use the High tree.
     //
-    Decoder->Len = LZMA_MIN_LENGTH;
+    Decoder.Len = LZMA_MIN_LENGTH;
     if (RcIsBitSet(&LenState->Choice))
     {
         if (RcIsBitSet(&LenState->Choice2))
         {
             probArray = LenState->High;
             limit = LZMA_MAX_HIGH_LENGTH;
-            Decoder->Len += LZMA_MAX_LOW_LENGTH + LZMA_MAX_MID_LENGTH;
+            Decoder.Len += LZMA_MAX_LOW_LENGTH + LZMA_MAX_MID_LENGTH;
         }
         else
         {
-            probArray = LenState->Mid[Position];
+            probArray = LenState->Mid[PosBit];
             limit = LZMA_MAX_MID_LENGTH;
-            Decoder->Len += LZMA_MAX_LOW_LENGTH;
+            Decoder.Len += LZMA_MAX_LOW_LENGTH;
         }
     }
     else
     {
-        probArray = LenState->Low[Position];
+        probArray = LenState->Low[PosBit];
         limit = LZMA_MAX_LOW_LENGTH;
     }
-    Decoder->Len += RcGetBitTree(probArray, limit);
+    Decoder.Len += RcGetBitTree(probArray, limit);
 }
 
 void
 LzDecodeMatch (
-    uint8_t Position
+    uint8_t PosBit
     )
 {
     uint16_t* probArray;
@@ -326,10 +325,10 @@ LzDecodeMatch (
     // Decode the length component of the "match" sequence. Then, since we're
     // about  to decode a new distance, update our history by one level.
     //
-    LzDecodeLen(&Decoder->BitModel.MatchLen, Position);
-    Decoder->Rep3 = Decoder->Rep2;
-    Decoder->Rep2 = Decoder->Rep1;
-    Decoder->Rep1 = Decoder->Rep0;
+    LzDecodeLen(&Decoder.u.BitModel.MatchLen, PosBit);
+    Decoder.Rep3 = Decoder.Rep2;
+    Decoder.Rep2 = Decoder.Rep1;
+    Decoder.Rep1 = Decoder.Rep0;
 
     //
     // Read the first 6 bits, which make up the "distance slot"
@@ -341,7 +340,7 @@ LzDecodeMatch (
         //
         // Slots 0-3 directly encode the distance as a literal number
         //
-        Decoder->Rep0 = distSlot;
+        Decoder.Rep0 = distSlot;
     }
     else
     {
@@ -368,7 +367,7 @@ LzDecodeMatch (
         // 128 to (2^31)-1.
         //
         distBits = (distSlot >> 1) - 1;
-        Decoder->Rep0 = (0b10 | (distSlot & 1)) << distBits;
+        Decoder.Rep0 = (0b10 | (distSlot & 1)) << distBits;
 
         //
         // Slots 4-13 have their own arithmetic-coded reverse bit trees. Slots
@@ -378,27 +377,27 @@ LzDecodeMatch (
         //
         if (distSlot < LZMA_FIRST_FIXED_DISTANCE_SLOT)
         {
-            probArray = &Decoder->BitModel.Dist[Decoder->Rep0 - distSlot];
+            probArray = &Decoder.u.BitModel.Dist[Decoder.Rep0 - distSlot];
         }
         else
         {
-            Decoder->Rep0 |= RcGetFixed(distBits - LZMA_DISTANCE_ALIGN_BITS) <<
+            Decoder.Rep0 |= RcGetFixed(distBits - LZMA_DISTANCE_ALIGN_BITS) <<
                              LZMA_DISTANCE_ALIGN_BITS;
             distBits = LZMA_DISTANCE_ALIGN_BITS;
-            probArray = Decoder->BitModel.Align;
+            probArray = Decoder.u.BitModel.Align;
         }
-        Decoder->Rep0 |= RcGetReverseBitTree(probArray, distBits);
+        Decoder.Rep0 |= RcGetReverseBitTree(probArray, distBits);
     }
 
     //
     // Indicate that the last sequence was a "match"
     //
-    LzSetMatch(&Decoder->Sequence);
+    LzSetMatch(&Decoder.Sequence);
 }
 
 void
 LzDecodeRepLen (
-    uint8_t Position,
+    uint8_t PosBit,
     bool IsLongRep
     )
 {
@@ -408,19 +407,19 @@ LzDecodeRepLen (
     //
     if (IsLongRep != false)
     {
-        LzDecodeLen(&Decoder->BitModel.RepLen, Position);
-        LzSetLongRep(&Decoder->Sequence);
+        LzDecodeLen(&Decoder.u.BitModel.RepLen, PosBit);
+        LzSetLongRep(&Decoder.Sequence);
     }
     else
     {
-        Decoder->Len = 1;
-        LzSetShortRep(&Decoder->Sequence);
+        Decoder.Len = 1;
+        LzSetShortRep(&Decoder.Sequence);
     }
 }
 
 void
 LzDecodeRep0(
-    uint8_t Position
+    uint8_t PosBit
     )
 {
     uint8_t bit;
@@ -431,13 +430,13 @@ LzDecodeRep0(
     // arithmetic-coded bit trees stored in "Rep0Long", with 1 tree for each
     // position bit (0-3).
     //
-    bit = RcIsBitSet(&Decoder->BitModel.Rep0Long[Decoder->Sequence][Position]);
-    LzDecodeRepLen(Position, bit);
+    bit = RcIsBitSet(&Decoder.u.BitModel.Rep0Long[Decoder.Sequence][PosBit]);
+    LzDecodeRepLen(PosBit, bit);
 }
 
 void
 LzDecodeLongRep (
-    uint8_t Position
+    uint8_t PosBit
     )
 {
     uint32_t newRep;
@@ -447,41 +446,43 @@ LzDecodeLongRep (
     // we should use for this match. The following three states are possible :
     //
     // {0,n} - "Long rep1", where the length is stored in an arithmetic-coded
-    // bit tree, and the distance is the 2nd most recently used distance (Rep1).
+    // bit tree, and the distance is the 2nd most recently used distance (Rep1)
+    //
     // {1,0} - "Long rep2", where the length is stored in an arithmetic-coded
-    // bit tree, and the distance is the 3rd most recently used distance (Rep2).
+    // bit tree, and the distance is the 3rd most recently used distance (Rep2)
+    //
     // {1,1} - "Long rep3", where the length is stored in an arithmetic-coded
-    // bit tree, and the distance is the 4th most recently used distance (Rep3).
+    // bit tree, and the distance is the 4th most recently used distance (Rep3)
     //
     // Once we have the right one, we must slide down each previously recently
     // used distance, so that the distance we're now using (Rep1, Rep2 or Rep3)
     // becomes "Rep0" again.
     //
-    if (RcIsBitSet(&Decoder->BitModel.Rep1[Decoder->Sequence]))
+    if (RcIsBitSet(&Decoder.u.BitModel.Rep1[Decoder.Sequence]))
     {
-        if (RcIsBitSet(&Decoder->BitModel.Rep2[Decoder->Sequence]))
+        if (RcIsBitSet(&Decoder.u.BitModel.Rep2[Decoder.Sequence]))
         {
-            newRep = Decoder->Rep3;
-            Decoder->Rep3 = Decoder->Rep2;
+            newRep = Decoder.Rep3;
+            Decoder.Rep3 = Decoder.Rep2;
         }
         else
         {
-            newRep = Decoder->Rep2;
+            newRep = Decoder.Rep2;
         }
-        Decoder->Rep2 = Decoder->Rep1;
+        Decoder.Rep2 = Decoder.Rep1;
     }
     else
     {
-        newRep = Decoder->Rep1;
+        newRep = Decoder.Rep1;
     }
-    Decoder->Rep1 = Decoder->Rep0;
-    Decoder->Rep0 = newRep;
-    LzDecodeRepLen(Position, true);
+    Decoder.Rep1 = Decoder.Rep0;
+    Decoder.Rep0 = newRep;
+    LzDecodeRepLen(PosBit, true);
 }
 
 void
 LzDecodeRep (
-    uint8_t Position
+    uint8_t PosBit
     )
 {
     //
@@ -493,6 +494,7 @@ LzDecodeRep (
     //
     // {0,0} - "Short rep", where the length is always 1 and distance is always
     // the most recently used distance (Rep0).
+    //
     // {0,1} - "Long rep0", where the length is stored in an arithmetic-coded
     // bit tree, and the distance is the most recently used distance (Rep0).
     //
@@ -501,13 +503,13 @@ LzDecodeRep (
     // additional bits to figure out which recently used distance (1, 2, or 3)
     // to use.
     //
-    if (RcIsBitSet(&Decoder->BitModel.Rep0[Decoder->Sequence]))
+    if (RcIsBitSet(&Decoder.u.BitModel.Rep0[Decoder.Sequence]))
     {
-        LzDecodeLongRep(Position);
+        LzDecodeLongRep(PosBit);
     }
     else
     {
-        LzDecodeRep0(Position);
+        LzDecodeRep0(PosBit);
     }
 }
 
@@ -547,9 +549,9 @@ LzDecode (
         // buffer "Rep0" bytes and repeat that character "Len" times.
         //
         posBit = position & (LZMA_POSITION_COUNT - 1);
-        if (RcIsBitSet(&Decoder->BitModel.Match[Decoder->Sequence][posBit]))
+        if (RcIsBitSet(&Decoder.u.BitModel.Match[Decoder.Sequence][posBit]))
         {
-            if (RcIsBitSet(&Decoder->BitModel.Rep[Decoder->Sequence]))
+            if (RcIsBitSet(&Decoder.u.BitModel.Rep[Decoder.Sequence]))
             {
                 LzDecodeRep(posBit);
             }
@@ -558,11 +560,11 @@ LzDecode (
                 LzDecodeMatch(posBit);
             }
 
-            if (!DtRepeatSymbol(Decoder->Len, Decoder->Rep0 + 1))
+            if (!DtRepeatSymbol(Decoder.Len, Decoder.Rep0 + 1))
             {
                 return false;
             }
-            Decoder->Len = 0;
+            Decoder.Len = 0;
         }
         else
         {
@@ -570,7 +572,7 @@ LzDecode (
         }
     }
     RcNormalize();
-    return (Decoder->Len == 0);
+    return (Decoder.Len == 0);
 }
 
 bool
@@ -604,10 +606,11 @@ LzInitialize (
     // bit tree which encodes either a "0" or a "1". By default, we initialize
     // the probabilities to 0.5 (50% chance).
     //
-    static_assert((LZMA_BIT_MODEL_SLOTS * 2) == sizeof(g_Decoder.BitModel), "Invalid size");
+    static_assert((LZMA_BIT_MODEL_SLOTS * 2) == sizeof(Decoder.u.BitModel),
+                  "Invalid size");
     for (int i = 0; i < LZMA_BIT_MODEL_SLOTS; i++)
     {
-        Decoder->RawProbabilities[i] = k_LzmaRcHalfProbability;
+        Decoder.u.RawProbabilities[i] = k_LzmaRcHalfProbability;
     }
     return true;
 }
