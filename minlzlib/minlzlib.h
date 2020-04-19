@@ -73,7 +73,7 @@ bool LzInitialize(uint8_t Properties);
 //
 // LZMA2 Decoder
 //
-bool Lz2DecodeStream(uint32_t* BytesProcessed);
+bool Lz2DecodeStream(uint32_t* BytesProcessed, bool GetSizeOnly);
 #ifdef MINLZ_INTEGRITY_CHECKS
 //
 // Checksum Management

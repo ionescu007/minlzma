@@ -89,7 +89,8 @@ Lz2DecodeChunk (
 
 bool
 Lz2DecodeStream (
-    uint32_t* BytesProcessed
+    uint32_t* BytesProcessed,
+    bool GetSizeOnly
     )
 {
     uint8_t (*pInfoBytes)[4];
@@ -163,6 +164,16 @@ Lz2DecodeStream (
         else if (controlByte.u.Lzma.ResetState != Lzma2NoReset)
         {
             break;
+        }
+
+        //
+        // Don't do any decompression if the caller only wants to know the size
+        //
+        if (GetSizeOnly != false)
+        {
+            *BytesProcessed += ChunkState.UncompressedSize;
+            BfSeek(ChunkState.CompressedSize, (uint8_t**)&pInfoBytes);
+            continue;
         }
 
         //

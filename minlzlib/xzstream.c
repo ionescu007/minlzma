@@ -257,7 +257,7 @@ XzDecodeBlock (
 #ifdef MINLZ_META_CHECKS
     BfSeek(0, &inputStart);
 #endif
-    if (!Lz2DecodeStream(BlockSize))
+    if (!Lz2DecodeStream(BlockSize, OutputBuffer == NULL))
     {
         return false;
     }
