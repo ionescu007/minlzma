@@ -30,7 +30,7 @@ main (
     inputBuffer = NULL;
     outputBuffer = NULL;
 
-    printf("minlzdec v.1.0.5 -- http://ionescu007.github.io/minlzma\n");
+    printf("minlzdec v.1.1.0 -- http://ionescu007.github.io/minlzma\n");
     printf("Copyright(c) 2020 Alex Ionescu (@aionescu)\n\n");
     if (ArgumentCount != 3)
     {

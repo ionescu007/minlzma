@@ -71,21 +71,19 @@ typedef union _LZMA2_CONTROL_BYTE
     {
         struct
         {
-            uint8_t UncompressedState : 2;
-            uint8_t Reserved : 3;
             uint8_t ResetState : 2;
+            uint8_t Reserved : 5;
             uint8_t IsLzma : 1;
         } Raw;
         struct
         {
-            uint8_t UncompressedSize : 5;
+            uint8_t RawSize : 5;
             uint8_t ResetState : 2;
             uint8_t IsLzma : 1;
         } Lzma;
         struct
         {
-            uint8_t : 5;
-            uint8_t ResetState : 2;
+            uint8_t : 7;
             uint8_t IsLzma : 1;
         } Common;
     } u;
