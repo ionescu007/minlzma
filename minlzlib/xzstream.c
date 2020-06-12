@@ -31,7 +31,9 @@ Environment:
 #include "minlzlib.h"
 #include "xzstream.h"
 
-void __security_check_cookie(uintptr_t _StackCookie) { (void)(_StackCookie); }
+#ifdef _WIN32
+void __security_check_cookie(_In_ uintptr_t _StackCookie) { (void)(_StackCookie); }
+#endif
 
 #ifdef MINLZ_META_CHECKS
 //
@@ -210,9 +212,9 @@ XzDecodeStreamFooter (
     //
     // Validate no flags other than checksum type are set
     //
-    if ((streamFooter->Flags != 0) &&
-        ((streamFooter->CheckType != XzCheckTypeCrc32) &&
-         (streamFooter->CheckType != XzCheckTypeNone)))
+    if ((streamFooter->u.Flags != 0) &&
+        ((streamFooter->u.s.CheckType != XzCheckTypeCrc32) &&
+         (streamFooter->u.s.CheckType != XzCheckTypeNone)))
     {
         return false;
     }
@@ -230,7 +232,7 @@ XzDecodeStreamFooter (
     //
     if (Crc32(&streamFooter->BackwardSize,
                sizeof(streamFooter->BackwardSize) +
-               sizeof(streamFooter->Flags)) !=
+               sizeof(streamFooter->u.Flags)) !=
         streamFooter->Crc32)
     {
         return false;
@@ -327,9 +329,9 @@ XzDecodeStreamHeader (
     //
     // Validate no flags other than checksum type are set
     //
-    if ((streamHeader->Flags != 0) &&
-        ((streamHeader->CheckType != XzCheckTypeCrc32) &&
-         (streamHeader->CheckType != XzCheckTypeNone)))
+    if ((streamHeader->u.Flags != 0) &&
+        ((streamHeader->u.s.CheckType != XzCheckTypeCrc32) &&
+         (streamHeader->u.s.CheckType != XzCheckTypeNone)))
     {
         return false;
     }
@@ -337,13 +339,13 @@ XzDecodeStreamHeader (
     //
     // Remember that a checksum might come at the end of the block later
     //
-    Container.ChecksumSize = streamHeader->CheckType * 4;
+    Container.ChecksumSize = streamHeader->u.s.CheckType * 4;
 #endif
 #ifdef MINLZ_INTEGRITY_CHECKS
     //
     // Compute the header's CRC32 and make sure it's not corrupted
     //
-    if (Crc32(&streamHeader->Flags, sizeof(streamHeader->Flags)) !=
+    if (Crc32(&streamHeader->u.Flags, sizeof(streamHeader->u.Flags)) !=
         streamHeader->Crc32)
     {
         return false;
@@ -354,7 +356,7 @@ XzDecodeStreamHeader (
 
 bool
 XzDecodeBlockHeader (
-    uint32_t OutputSize
+    void
     )
 {
     PXZ_BLOCK_HEADER blockHeader;
@@ -381,7 +383,7 @@ XzDecodeBlockHeader (
     //
     // Validate that no additional flags or filters are enabled
     //
-    if (blockHeader->Flags != 0)
+    if (blockHeader->u.Flags != 0)
     {
         return false;
     }
@@ -397,31 +399,29 @@ XzDecodeBlockHeader (
     //
     // With the expected number of property bytes
     //
-    if (blockHeader->LzmaFlags.Size != sizeof(blockHeader->LzmaFlags.Properties))
+    if (blockHeader->LzmaFlags.Size != sizeof(blockHeader->LzmaFlags.u.Properties))
     {
         return false;
     }
 
     //
-    // The only property is the dictionary size, make sure it is valid
+    // The only property is the dictionary size, make sure it is valid.
     //
-    size = blockHeader->LzmaFlags.DictionarySize;
+    // We don't actually need to store or compare the size with anything since
+    // the library expects the caller to always put in a buffer that's large
+    // enough to contain the full uncompressed file (or calling it in "get size
+    // only" mode to get this information).
+    //
+    // This output buffer can thus be smaller than the size of the dictionary
+    // which is absolutely OK as long as that's actually the size of the output
+    // file. If callers pass in a buffer size that's too small, decoding will
+    // fail at later stages anyway, and that's incorrect use of minlzlib.
+    //
+    size = blockHeader->LzmaFlags.u.s.DictionarySize;
     if (size > 39)
     {
         return false;
     }
-
-    //
-    // And make sure it isn't larger than the output buffer
-    //
-    size = (2 + (size & 1)) << ((size >> 1) + 11);
-    if (size > OutputSize)
-    {
-        return false;
-    }
-#else
-    (void)(OutputSize);
-#endif
 #ifdef MINLZ_INTEGRITY_CHECKS
     //
     // Compute the header's CRC32 and make sure it's not corrupted
@@ -432,6 +432,7 @@ XzDecodeBlockHeader (
     {
         return false;
     }
+#endif
 #endif
     return true;
 }
@@ -451,7 +452,7 @@ XzDecode (
     DtInitialize(OutputBuffer, *OutputSize);
 
     //
-    // Decode the stream header for validity
+    // Decode the stream header for check for validity
     //
     if (!XzDecodeStreamHeader())
     {
@@ -459,9 +460,9 @@ XzDecode (
     }
 
     //
-    // Decode the block header to know the dictionary size
+    // Decode the block header for check for validity
     //
-    if (!XzDecodeBlockHeader(*OutputSize))
+    if (!XzDecodeBlockHeader())
     {
         return false;
     }
@@ -470,7 +471,7 @@ XzDecode (
     // Decode the actual block
     //
     if (!XzDecodeBlock(OutputBuffer, OutputSize))
-    {
+    { 
         return false;
     }
 #ifdef MINLZ_META_CHECKS

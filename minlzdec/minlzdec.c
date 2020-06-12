@@ -66,6 +66,7 @@ main (
     }
 
     inputSize = (uint32_t)fileSize;
+    outputSize = 0;
     decodeResult = XzDecode(inputBuffer, inputSize, outputBuffer, &outputSize);
     if (decodeResult == false)
     {

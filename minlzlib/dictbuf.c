@@ -37,10 +37,10 @@ typedef struct _DICTIONARY_STATE
     // Buffer, start position, current position, and offset limit in the buffer
     //
     uint8_t* Buffer;
+    uint32_t BufferSize;
     uint32_t Start;
     uint32_t Offset;
     uint32_t Limit;
-    uint32_t Size;
 } DICTIONARY_STATE, *PDICTIONARY_STATE;
 DICTIONARY_STATE Dictionary;
 
@@ -55,7 +55,7 @@ DtInitialize (
     //
     Dictionary.Buffer = HistoryBuffer;
     Dictionary.Offset = 0;
-    Dictionary.Size = Size;
+    Dictionary.BufferSize = Size;
 }
 
 bool
@@ -67,7 +67,7 @@ DtSetLimit (
     // Make sure that the passed in dictionary limit fits within the size, and
     // then set this as the new limit. Save the starting point (current offset)
     //
-    if ((Dictionary.Offset + Limit) > Dictionary.Size)
+    if ((Dictionary.Offset + Limit) > Dictionary.BufferSize)
     {
         return false;
     }
@@ -107,7 +107,7 @@ DtGetSymbol (
 {
     //
     // If the dictionary is still empty, just return 0, otherwise, return the
-    // symbol that is Distance bytes backward
+    // symbol that is Distance bytes backward.
     //
     if (Distance > Dictionary.Offset)
     {
@@ -134,14 +134,19 @@ DtRepeatSymbol (
     )
 {
     //
-    // Make sure we never get asked to write past the end of the dictionary,
-    // then rewrite the stream of symbols forward into the dictionary
+    // Make sure we never get asked to write past the end of the dictionary. We
+    // should also not allow the distance to go beyond the current offset since
+    // DtGetSymbol will return 0 thinking the dictionary is empty.
     //
-    if ((Length + Dictionary.Offset) > Dictionary.Limit)
+    if (((Length + Dictionary.Offset) > Dictionary.Limit) ||
+        (Distance > Dictionary.Offset))
     {
         return false;
     }
 
+    //
+    // Now rewrite the stream of past symbols forward into the dictionary.
+    //
     do
     {
         DtPutSymbol(DtGetSymbol(Distance));

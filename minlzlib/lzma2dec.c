@@ -130,12 +130,12 @@ Lz2DecodeStream (
 
         //
         // Decode the 1-based big-endian uncompressed size. It must fit into
-        // the output buffer that was supplied.
+        // the output buffer that was supplied, unless we're just getting size.
         //
         ChunkState.UncompressedSize = controlByte.u.Lzma.UncompressedSize << 16;
         ChunkState.UncompressedSize += (*pInfoBytes)[0] << 8;
         ChunkState.UncompressedSize += (*pInfoBytes)[1] + 1;
-        if (!DtSetLimit(ChunkState.UncompressedSize))
+        if (!GetSizeOnly && !DtSetLimit(ChunkState.UncompressedSize))
         {
             break;
         }
@@ -169,7 +169,7 @@ Lz2DecodeStream (
         //
         // Don't do any decompression if the caller only wants to know the size
         //
-        if (GetSizeOnly != false)
+        if (GetSizeOnly)
         {
             *BytesProcessed += ChunkState.UncompressedSize;
             BfSeek(ChunkState.CompressedSize, (uint8_t**)&pInfoBytes);
