@@ -7,18 +7,22 @@ The Minimal LZMA (`minlzma`) project aims to provide a minimalistic, cross-platf
 ~~~ c
 /**
  * @brief        Decompresses an XZ stream from InputBuffer into OutputBuffer.
+ *
  * @description  The XZ stream must contain a single block with an LZMA2 filter
  *               and no BJC2 filters, using default LZMA properties, and using
  *               either CRC32 or None as the checksum type.
  *
  * @param[in]    InputBuffer - A fully formed buffer containing the XZ stream.
  * @param[in]    InputSize - The size of the input buffer.
- * @param[in]    OutputBuffer - A fully allocated buffer to receive the outout.
+ * @param[inopt] OutputBuffer - A fully allocated buffer to receive the output.
+ *               Callers can pass in NULL if they do not intend to decompress,
+ *               in combination with setting OutputSize to 0, in order to query
+ *               the final expected size of the decompressed buffer.
  * @param[inout] OutputSize - On input, the size of the buffer. On output, the
  *               size of the decompressed result.
  *
  * @return       true - The input buffer was fully decompressed in OutputBuffer
- *               false - A failure occured during the decompression process
+ *               false - A failure occured during the decompression process.
  */
 bool
 XzDecode (
@@ -33,10 +37,9 @@ XzDecode (
 In order to provide its vast simplicity, fast performance, minimal source, and small compiled size, `minlzlib` makes certain assumptions about the input file and has certain restrictions or limitations:
 
 * The entire input stream must be available (multi-call/streaming mode are not supported)
-* The entire output buffer must be allocated with a fixed size
-* The XZ file must have a single stream, with a single block (with a single dictionary/properties reset)
+* The entire output buffer must be allocated with a fixed size -- however, callers are able to query the required size
+* The XZ file must be "solid", i.e.: a single block (with a single dictionary/properties reset)
 * The LZMA2 property byte must indicate the LZMA properties `lc = 3`, `pb = 2`, `lc = 0`
-* The XZ block must only have compressed LZMA2 chunks (LZMA2 uncompressed chunks are not supported)
 * The XZ block must not have the optional "compressed size" and/or "uncompressed size" VLI metadata
 
 Note that while these assumptions may seem overly restrictive, they correspond to the usual files produced by `xzutils`, `7-zip` when choosing XZ as the format, and the `Python` `LZMA` module. Most encoders do not support the vast majority of XZ/LZMA2's purported capabilities, such as SHA256 or CRC64, multiple blocks, etc.
@@ -44,19 +47,32 @@ Note that while these assumptions may seem overly restrictive, they correspond t
 # Testing (Linux)
 
 * Generate 4MB of noise :
-* `shasum` input file
-* Compress with `Python`
-* Compress with `xzutils`
-* Decompress with `minlzdec`
-* `shasum` output files
+  - `shasum` input file
+  - Compress with `Python`
+  - Compress with `xzutils`
+  - Decompress with `minlzdec`
+  - `shasum` output files
+  
+* Generate 4MB of whitespace:
+  - `shasum` input file
+  - Compress with `Python`
+  - Compress with `xzutils`
+  - Decompress with `minlzdec`
+  - `shasum` output files
 
 # Testing (Windows)
 
 * Generate 4MB of noise:
-* `Get-FileHash` input file
-* Compress with `7z`
-* Decompress with `minlzdec`
-* `Get-FileHash` output file
+  - `Get-FileHash` input file
+  - Compress with `7z`
+  - Decompress with `minlzdec`
+  - `Get-FileHash` output file
+  
+* Generate 4MB of whitespace:
+  - `Get-FileHash` input file
+  - Compress with `7z`
+  - Decompress with `minlzdec`
+  - `Get-FileHash` output file
 
 # Compile-time Options
 * `MINLZ_INTEGRITY_CHECKS` -- This option configures whether or not CRC32 checksumming of the XZ data structures and compressed block should be performed, or skipped. Removing this functionality gains an increase in performance which scales with the size of the input file. It results in a minimal increase in library size, and also requires the implementation of a platform-specific CRC32 checksum function that correponds to the following prototype: `uint32_t OsComputeCrc32(uint32_t Initial, const uint8_t* Data, uint32_t Length);`
