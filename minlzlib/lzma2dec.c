@@ -11,9 +11,8 @@ Abstract:
     This module implements the LZMA2 decoding logic responsible for parsing the
     LZMA2 Control Byte, the Information Bytes (Compressed & Uncompressed Stream
     Size), and the Property Byte during the initial Dictionary Reset. Note that
-    this module only implements support for a single such reset. Finally, only
-    streams that are fully LZMA compressed are supported -- uncompressed blocks
-    are not handled.
+    this module only implements support for a single such reset (i.e.: archives
+    in "solid" mode).
 
 Author:
 
