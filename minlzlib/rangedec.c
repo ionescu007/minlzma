@@ -35,13 +35,6 @@ Environment:
 #include "minlzlib.h"
 
 //
-// The range decoder uses 11 probability bits, where 2048 is 100% chance of a 0
-//
-#define LZMA_RC_PROBABILITY_BITS            11
-#define LZMA_RC_MAX_PROBABILITY             (1 << LZMA_RC_PROBABILITY_BITS)
-const uint16_t k_LzmaRcHalfProbability = LZMA_RC_MAX_PROBABILITY / 2;
-
-//
 // The range decoder uses an exponential moving average of the last probability
 // hit (match or miss) with an adaptation rate of 5 bits (which falls in the
 // middle of its 11 bits used to encode a probability.

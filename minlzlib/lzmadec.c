@@ -27,6 +27,8 @@ Environment:
 #include "minlzlib.h"
 #include "lzmadec.h"
 
+static const uint16_t k_LzmaRcHalfProbability = LZMA_RC_MAX_PROBABILITY / 2;
+
 //
 // Probability Bit Model for Lenghts in Rep and in Match sequences
 //
@@ -580,7 +582,6 @@ LzInitialize (
     uint8_t Properties
     )
 {
-    extern uint16_t k_LzmaRcHalfProbability;
     //
     // LZMA decoding uses 3 "properties" which determine how the probability
     // bit model will be laid out. These store the number of bits that are used

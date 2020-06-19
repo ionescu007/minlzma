@@ -52,6 +52,12 @@ bool DtCanWrite(uint32_t* Position);
 bool DtIsComplete(uint32_t* BytesProcessed);
 
 //
+// The range decoder uses 11 probability bits, where 2048 is 100% chance of a 0
+//
+#define LZMA_RC_PROBABILITY_BITS            11
+#define LZMA_RC_MAX_PROBABILITY             (1 << LZMA_RC_PROBABILITY_BITS)
+
+//
 // Range Decoder
 //
 uint8_t RcGetBitTree(uint16_t* BitModel, uint16_t Limit);
