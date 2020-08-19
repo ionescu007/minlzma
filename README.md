@@ -99,3 +99,9 @@ The author would like to thank the shoulders of the following giants, whose code
 * Fabian Giesen -- author of oodle
 * Igor Pavlov -- author of 7-zip
 * Lasse Collin -- author of xzutils
+
+The author would also like to thank the following reviwers for identifying various bugs, typos, and other improvements:
+
+* Satoshi Tanda -- https://github.com/tandasat
+* Daniel Martin --
+* Thomas Fabber -- https://github.com/ThFabba
