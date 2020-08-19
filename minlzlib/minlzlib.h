@@ -63,6 +63,7 @@ uint8_t RcIsBitSet(uint16_t* Probability);
 void RcNormalize(void);
 bool RcCanRead(void);
 bool RcIsComplete(uint32_t* Offset);
+void RcSetDefaultProbability(uint16_t* Probability);
 
 //
 // LZMA Decoder

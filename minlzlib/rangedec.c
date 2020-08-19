@@ -383,3 +383,14 @@ RcGetFixed (
     } while (--HighestBit > 0);
     return symbol;
 }
+
+void
+RcSetDefaultProbability (
+    uint16_t* Probability
+    )
+{
+    //
+    // By default, we initialize the probabilities to 0.5 (50% chance).
+    //
+    *Probability = k_LzmaRcHalfProbability;
+}

@@ -124,7 +124,7 @@ LzSetLiteral (
         // literal and takes us to having a literal at the end, which are state
         // packets 4-6 that we just described in the paragraph above.
         //
-        *State -= 3;
+        *State = (LZMA_SEQUENCE_STATE)(*State - 3);
     }
     else
     {
@@ -133,7 +133,7 @@ LzSetLiteral (
         // the last 3 sequence packets, so seeing a literal now takes us to a
         // "literal at the end" state, either following a match or a rep.
         //
-        *State -= 6;
+        *State = (LZMA_SEQUENCE_STATE)(*State - 6);
     }
 }
 
@@ -580,7 +580,6 @@ LzInitialize (
     uint8_t Properties
     )
 {
-    extern uint16_t k_LzmaRcHalfProbability;
     //
     // LZMA decoding uses 3 "properties" which determine how the probability
     // bit model will be laid out. These store the number of bits that are used
@@ -604,8 +603,7 @@ LzInitialize (
     //
     // Initialize decoder to default state in case we're called more than once.
     // The LZMA "Bit Model" is an adaptive arithmetic-coded probability-based
-    // bit tree which encodes either a "0" or a "1". By default, we initialize
-    // the probabilities to 0.5 (50% chance).
+    // bit tree which encodes either a "0" or a "1".
     //
     Decoder.Sequence = LzmaLitLitLitState;
     Decoder.Rep1 = Decoder.Rep2 = Decoder.Rep3 = 0;
@@ -613,7 +611,7 @@ LzInitialize (
                   "Invalid size");
     for (int i = 0; i < LZMA_BIT_MODEL_SLOTS; i++)
     {
-        Decoder.u.RawProbabilities[i] = k_LzmaRcHalfProbability;
+        RcSetDefaultProbability(&Decoder.u.RawProbabilities[i]);
     }
     return true;
 }
