@@ -9,7 +9,7 @@ Module Name:
 Abstract:
 
     This header file is the main include for the minlz library. It contains the
-    internal function definitions for the history & input buffers, the LZMA and
+    internal function definitions for the history \& input buffers, the LZMA and
     LZMA2 decoders, and the arithmetic (de)coder.
 
 Author:

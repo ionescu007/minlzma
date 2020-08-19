@@ -290,7 +290,8 @@ XzDecodeBlock (
 #endif
     (void)(OutputBuffer);
 #ifdef MINLZ_INTEGRITY_CHECKS
-    if (Crc32(OutputBuffer, *BlockSize) != *(uint32_t*)inputEnd)
+    if ((OutputBuffer != NULL) &&
+        (Crc32(OutputBuffer, *BlockSize) != *(uint32_t*)inputEnd))
     {
         return false;
     }

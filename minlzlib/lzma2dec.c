@@ -27,29 +27,19 @@ Environment:
 #include "minlzlib.h"
 #include "lzma2dec.h"
 
-//
-// LZMA2 Chunk State
-//
-typedef struct _CHUNK_STATE
-{
-    //
-    // Compressed and uncompressed size of the LZMA chunk being decoded
-    //
-    uint32_t RawSize;
-    uint16_t CompressedSize;
-} CHUNK_STATE, * PCHUNK_STATE;
-CHUNK_STATE Chunk;
-
 bool
 Lz2DecodeChunk (
-    uint32_t* BytesProcessed
+    uint32_t* BytesProcessed,
+    uint32_t RawSize,
+    uint16_t CompressedSize
     )
 {
     uint32_t bytesProcessed;
+
     //
     // Make sure we always have space for the biggest possible LZMA sequence
     //
-    if (Chunk.CompressedSize < LZMA_MAX_SEQUENCE_SIZE)
+    if (CompressedSize < LZMA_MAX_SEQUENCE_SIZE)
     {
         return false;
     }
@@ -67,8 +57,7 @@ Lz2DecodeChunk (
     // be zero once we finished with the last chunk. Make sure the stream ended
     // exactly where we expected it to.
     //
-    if (!RcIsComplete(&bytesProcessed) ||
-        (bytesProcessed != Chunk.CompressedSize))
+    if (!RcIsComplete(&bytesProcessed) || (bytesProcessed != CompressedSize))
     {
         return false;
     }
@@ -77,7 +66,7 @@ Lz2DecodeChunk (
     // The entire output stream must have been written to, and the dictionary
     // must be full now.
     //
-    if (!DtIsComplete(&bytesProcessed) || (bytesProcessed != Chunk.RawSize))
+    if (!DtIsComplete(&bytesProcessed) || (bytesProcessed != RawSize))
     {
         return false;
     }
@@ -94,6 +83,8 @@ Lz2DecodeStream (
     uint8_t* inBytes;
     LZMA2_CONTROL_BYTE controlByte;
     uint8_t propertyByte;
+    uint32_t rawSize;
+    uint16_t compressedSize;
 
     //
     // Read the first control byte
@@ -113,7 +104,7 @@ Lz2DecodeStream (
         //
         // Read the appropriate number of info bytes based on the stream type.
         //
-        if (!BfSeek((controlByte.u.Common.IsLzma ==1 )? 4 : 2, &inBytes))
+        if (!BfSeek((controlByte.u.Common.IsLzma == 1 ) ? 4 : 2, &inBytes))
         {
             break;
         }
@@ -124,22 +115,23 @@ Lz2DecodeStream (
         //
         if (controlByte.u.Common.IsLzma == 1)
         {
-            Chunk.RawSize = controlByte.u.Lzma.RawSize << 16;
-            Chunk.CompressedSize = inBytes[2] << 8;
-            Chunk.CompressedSize += inBytes[3] + 1;
+            rawSize = controlByte.u.Lzma.RawSize << 16;
+            compressedSize = inBytes[2] << 8;
+            compressedSize += inBytes[3] + 1;
         }
         else
         {
-            Chunk.RawSize = 0;
+            rawSize = 0;
+            compressedSize = 0;
         }
 
         //
         // Make sure that the output buffer that was supplied is big enough to
         // fit the uncompressed chunk, unless we're just calculating the size.
         //
-        Chunk.RawSize += inBytes[0] << 8;
-        Chunk.RawSize += inBytes[1] + 1;
-        if (!GetSizeOnly && !DtSetLimit(Chunk.RawSize))
+        rawSize += inBytes[0] << 8;
+        rawSize += inBytes[1] + 1;
+        if (!GetSizeOnly && !DtSetLimit(rawSize))
         {
             break;
         }
@@ -170,9 +162,8 @@ Lz2DecodeStream (
         //
         if (GetSizeOnly)
         {
-            *BytesProcessed += Chunk.RawSize;
-            BfSeek((controlByte.u.Common.IsLzma == 1) ? Chunk.CompressedSize :
-                                                        Chunk.RawSize,
+            *BytesProcessed += rawSize;
+            BfSeek((controlByte.u.Common.IsLzma == 1) ? compressedSize : rawSize,
                    &inBytes);
             continue;
         }
@@ -181,7 +172,7 @@ Lz2DecodeStream (
             //
             // Seek to the requested size in the input buffer
             //
-            if (!BfSeek(Chunk.RawSize, &inBytes))
+            if (!BfSeek(rawSize, &inBytes))
             {
                 return false;
             }
@@ -189,7 +180,7 @@ Lz2DecodeStream (
             //
             // Copy the data into the dictionary as-is
             //
-            for (uint32_t i = 0; i < Chunk.RawSize; i++)
+            for (uint32_t i = 0; i < rawSize; i++)
             {
                 DtPutSymbol(inBytes[i]);
             }
@@ -197,7 +188,7 @@ Lz2DecodeStream (
             //
             // Update bytes and keep going to the next chunk
             //
-            *BytesProcessed += Chunk.RawSize;
+            *BytesProcessed += rawSize;
             continue;
         }
 
@@ -206,7 +197,7 @@ Lz2DecodeStream (
         // coding decoder, and let it know how much input data exists. We've
         // already validated that this much space exists in the input buffer.
         //
-        if (!RcInitialize(&Chunk.CompressedSize))
+        if (!RcInitialize(&compressedSize))
         {
             break;
         }
@@ -214,7 +205,7 @@ Lz2DecodeStream (
         //
         // Start decoding the LZMA sequences in this chunk
         //
-        if (!Lz2DecodeChunk(BytesProcessed))
+        if (!Lz2DecodeChunk(BytesProcessed, rawSize, compressedSize))
         {
             break;
         }

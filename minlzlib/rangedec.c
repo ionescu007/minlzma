@@ -15,12 +15,11 @@ Abstract:
     the bit "0", and the bit "1", so there are only ever two probability ranges
     that need to be checked each pass. In LZMA, a probability of 100% encodes a
     "0", while 0% encodes a "1". Initially, all probabilities are assumed to be
-    50%. Probabilities are stored using 11-bits (2048 == 100%), and thus use 16
+    50%. Probabilities are stored using 11-bits (2048 \=\= 100%), and thus use 16
     bits of storage. Finally, the range decoder is adaptive, meaning that each
     time a bit is decoded, the probabilities are updated: each 0 increases the
     probability of another 0, and each 1 decrases it. The algorithm adapts the
     probabilities using an exponential moving average with a shift ratio of 5.
-
 
 Author:
 
@@ -146,7 +145,7 @@ RcIsComplete (
     //
     // When the last symbol has been decoded, the last code should be zero as
     // there is nothing left to describe. Return the offset in the buffer where
-    // this occured (which should be equal to the compressed size).
+    // this occurred (which should be equal to the compressed size).
     //
     BfSeek(0, &pos);
     *BytesProcessed = (uint32_t)(pos - RcState.Start);
@@ -164,7 +163,7 @@ RcNormalize (
     // the probability range not to avoid a "stuck" state where we cannot tell
     // apart the two branches (above/below the probability range) because the
     // two options appear identical with the number of precision bits that we
-    // have. In this cas, shift the state by a byte (8 bits) and read one more.
+    // have. In this case, shift the state by a byte (8 bits) and read another.
     //
     if (RcState.Range < LZMA_RC_MIN_RANGE)
     {
@@ -216,7 +215,7 @@ RcIsBitSet (
 
     //
     // Check if the current arithmetic code is descried by the next calculated
-    // proportionally-divded probability range. Recall the the probabilities
+    // proportionally-divided probability range. Recall that the probabilities
     // encode the chance of the symbol (bit) being a 0 -- not a 1!
     //
     // Therefore, if the next chunk of the code lies outside of this new range,

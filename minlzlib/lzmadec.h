@@ -77,26 +77,38 @@ Environment:
 typedef enum _LZMA_SEQUENCE_STATE
 {
     //
-    // States where we last saw at least two literals
+    // State where we last saw three literals
     //
     LzmaLitLitLitState,
+    //
+    // States where we last saw two literals preceeded by a non-literal
+    //
     LzmaMatchLitLitState,
     LzmaRepLitLitState,
-    //
-    // States where we last saw one literal
-    //
     LzmaLitShortrepLitLitState,
+    //
+    // States where we last saw one literal preceeded by a non-literal
+    //
     LzmaMatchLitState,
     LzmaRepLitState,
     LzmaLitShortrepLitState,
     //
-    // States where we did not last see a literal
+    // Separator between states where we last saw at least one literal
     //
     LzmaMaxLitState,
+    //
+    // States where we last saw a non-literal preceeded by a literal
+    //
     LzmaLitMatchState = 7,
     LzmaLitRepState,
     LzmaLitShortrepState,
+    //
+    // States where we last saw two non-literals
+    //
     LzmaNonlitMatchState,
     LzmaNonlitRepState,
+    //
+    // Separator for number of total states
+    //
     LzmaMaxState
 } LZMA_SEQUENCE_STATE, * PLZMA_SEQUENCE_STATE;

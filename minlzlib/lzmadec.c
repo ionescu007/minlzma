@@ -9,7 +9,7 @@ Module Name:
 Abstract:
 
     This module implements the LZMA Decoding Logic responsible for decoding the
-    three possible types of LZMA "packets": matches, repetitions (short & long)
+    three possible types of LZMA "packets": matches, repetitions (short \& long)
     and literals. The probability model for each type of packet is also stored
     in this file, along with the management of the previously seen packet types
     (which is tracked as the "sequence").
@@ -120,7 +120,7 @@ LzSetLiteral (
         // state packets 1-3.
         //
         // States 7-9 represent packets with a literal at the start, followed
-        // by a match/rep/shortrep. Seing another literal now drops this first
+        // by a match/rep/shortrep. Seeing another literal now drops this first
         // literal and takes us to having a literal at the end, which are state
         // packets 4-6 that we just described in the paragraph above.
         //
@@ -130,7 +130,7 @@ LzSetLiteral (
     {
         //
         // Finally, state 10 and 11 represent cases without a single literal in
-        // the last 3 sequence packets, so seeing a literal now takes us to a
+        // the last 2 sequence packets, so seeing a literal now takes us to a
         // "literal at the end" state, either following a match or a rep.
         //
         *State = (LZMA_SEQUENCE_STATE)(*State - 6);
@@ -405,7 +405,7 @@ LzDecodeRepLen (
     // Decode the length byte and indicate the last sequence was a "rep".
     // If this is a short rep, then the length is always hard-coded to 1.
     //
-    if (IsLongRep != false)
+    if (IsLongRep)
     {
         LzDecodeLen(&Decoder.u.BitModel.RepLen, PosBit);
         LzSetLongRep(&Decoder.Sequence);

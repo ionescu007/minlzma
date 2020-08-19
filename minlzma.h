@@ -16,8 +16,10 @@
  * @param[in,out]  OutputSize - On input, the size of the buffer. On output, the
  *                 size of the decompressed result.
  *
- * @return         true - The input buffer was fully decompressed in OutputBuffer
- *                 false - A failure occured during the decompression process.
+ * @return         true - The input buffer was fully decompressed in OutputBuffer,
+ *                 or no decompression was requested, the size of the decompressed
+ *                 buffer was returned in OutputSIze.
+ *                 false - A failure occurred during the decompression process.
  */
 bool
 XzDecode (
