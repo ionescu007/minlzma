@@ -105,3 +105,4 @@ The author would also like to thank the following reviwers for identifying vario
 * Satoshi Tanda -- https://github.com/tandasat
 * Daniel Martin --
 * Thomas Fabber -- https://github.com/ThFabba
+* Cameron Gutman -- https://github.com/cgutman
