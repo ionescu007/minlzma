@@ -606,7 +606,7 @@ LzInitialize (
     // bit tree which encodes either a "0" or a "1".
     //
     Decoder.Sequence = LzmaLitLitLitState;
-    Decoder.Rep1 = Decoder.Rep2 = Decoder.Rep3 = 0;
+    Decoder.Rep0 = Decoder.Rep1 = Decoder.Rep2 = Decoder.Rep3 = 0;
     static_assert((LZMA_BIT_MODEL_SLOTS * 2) == sizeof(Decoder.u.BitModel),
                   "Invalid size");
     for (int i = 0; i < LZMA_BIT_MODEL_SLOTS; i++)
