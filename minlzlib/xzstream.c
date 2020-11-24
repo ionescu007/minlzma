@@ -31,6 +31,19 @@ Environment:
 #include "minlzlib.h"
 #include "xzstream.h"
 
+//
+// XzDecodeBlockHeader can return "I successfully found a block",
+// "I failed/bad block header", or "there was no block header".
+// Though minlzlib explicitly only claims to handle files with a
+// single block, it needs to also handle files with no blocks at all.
+// (Produced by "xz" when compressing an empty input file)
+//
+typedef enum _XZ_DECODE_BLOCK_HEADER_RESULT {
+    XzBlockHeaderFail = 0,
+    XzBlockHeaderSuccess = 1,
+    XzBlockHeaderNoBlock = 2
+} XZ_DECODE_BLOCK_HEADER_RESULT;
+
 #ifdef _WIN32
 void __security_check_cookie(_In_ uintptr_t _StackCookie) { (void)(_StackCookie); }
 #endif
@@ -355,7 +368,7 @@ XzDecodeStreamHeader (
     return true;
 }
 
-bool
+XZ_DECODE_BLOCK_HEADER_RESULT
 XzDecodeBlockHeader (
     void
     )
@@ -369,7 +382,15 @@ XzDecodeBlockHeader (
     //
     if (!BfSeek(sizeof(*blockHeader), (uint8_t**)&blockHeader))
     {
-        return false;
+        return XzBlockHeaderFail;
+    }
+    if (blockHeader->Size == 0)
+    {
+        //
+        // That's no block! That's an index!
+        //
+        BfSeek((uint32_t)(-(uint16_t)sizeof(*blockHeader)), (uint8_t**)&blockHeader);
+        return XzBlockHeaderNoBlock;
     }
 #ifdef MINLZ_META_CHECKS
     //
@@ -378,7 +399,7 @@ XzDecodeBlockHeader (
     Container.HeaderSize = (blockHeader->Size + 1) * 4;
     if (Container.HeaderSize != sizeof(*blockHeader))
     {
-        return false;
+        return XzBlockHeaderFail;
     }
 
     //
@@ -386,7 +407,7 @@ XzDecodeBlockHeader (
     //
     if (blockHeader->u.Flags != 0)
     {
-        return false;
+        return XzBlockHeaderFail;
     }
 
     //
@@ -394,7 +415,7 @@ XzDecodeBlockHeader (
     //
     if (blockHeader->LzmaFlags.Id != 0x21)
     {
-        return false;
+        return XzBlockHeaderFail;
     }
 
     //
@@ -402,7 +423,7 @@ XzDecodeBlockHeader (
     //
     if (blockHeader->LzmaFlags.Size != sizeof(blockHeader->LzmaFlags.u.Properties))
     {
-        return false;
+        return XzBlockHeaderFail;
     }
 
     //
@@ -421,7 +442,7 @@ XzDecodeBlockHeader (
     size = blockHeader->LzmaFlags.u.s.DictionarySize;
     if (size > 39)
     {
-        return false;
+        return XzBlockHeaderFail;
     }
 #ifdef MINLZ_INTEGRITY_CHECKS
     //
@@ -431,11 +452,11 @@ XzDecodeBlockHeader (
               Container.HeaderSize - sizeof(blockHeader->Crc32)) !=
         blockHeader->Crc32)
     {
-        return false;
+        return XzBlockHeaderFail;
     }
 #endif
 #endif
-    return true;
+    return XzBlockHeaderSuccess;
 }
 
 bool
@@ -463,18 +484,24 @@ XzDecode (
     //
     // Decode the block header for check for validity
     //
-    if (!XzDecodeBlockHeader())
+    switch (XzDecodeBlockHeader())
     {
+    case XzBlockHeaderFail:
         return false;
+    case XzBlockHeaderNoBlock:
+        *OutputSize = 0;
+        break;
+    case XzBlockHeaderSuccess:
+        //
+        // Decode the actual block
+        //
+        if (!XzDecodeBlock(OutputBuffer, OutputSize))
+        {
+            return false;
+        }
+        break;
     }
 
-    //
-    // Decode the actual block
-    //
-    if (!XzDecodeBlock(OutputBuffer, OutputSize))
-    { 
-        return false;
-    }
 #ifdef MINLZ_META_CHECKS
     //
     // Decode the index for validity checks

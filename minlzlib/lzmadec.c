@@ -99,6 +99,23 @@ typedef struct _DECODER_STATE
 } DECODER_STATE, *PDECODER_STATE;
 DECODER_STATE Decoder;
 
+//
+// LZMA decoding uses 3 "properties" which determine how the probability
+// bit model will be laid out. These store the number of bits that are used
+// to pick the correct Literal Coder ("lc"), the number of Position bits to
+// select the Literal coder ("lp"), and the number of Position Bits used to
+// select various lengths ("pb"). In LZMA2, these properties are encoded in
+// a single byte with the formula: ((pb * 45) + lp * 9) + lc).
+//
+// We only support the default {lc = 3, lp = 0, pb = 2} properties, which
+// are what the main encoders out there use. This means that a total of 2
+// bits will be used for arithmetic-coded bit trees that are dependent on
+// the current position, and that a total of 3 bits will be used when we
+// pick the arithmetic-coded bit tree used for literal coding. The 0 means
+// this selection will _not_ be dependent on the position in the buffer.
+//
+const uint8_t LzSupportedProperties = (LZMA_PB * 45) + (LZMA_LP * 9) + (LZMA_LC);
+
 void
 LzSetLiteral (
     PLZMA_SEQUENCE_STATE State
@@ -580,22 +597,7 @@ LzInitialize (
     uint8_t Properties
     )
 {
-    //
-    // LZMA decoding uses 3 "properties" which determine how the probability
-    // bit model will be laid out. These store the number of bits that are used
-    // to pick the correct Literal Coder ("lc"), the number of Position bits to
-    // select the Literal coder ("lp"), and the number of Position Bits used to
-    // select various lengths ("pb"). In LZMA2, these properties are encoded in
-    // a single byte with the formula: ((pb * 45) + lp * 9) + lc).
-    //
-    // We only support the default {lc = 3, lp = 0, pb = 2} properties, which
-    // are what the main encoders out there use. This means that a total of 2
-    // bits will be used for arithmetic-coded bit trees that are dependent on
-    // the current position, and that a total of 3 bits will be used when we
-    // pick the arithmetic-coded bit tree used for literal coding. The 0 means
-    // this selection will _not_ be dependent on the position in the buffer.
-    //
-    if (Properties != ((LZMA_PB * 45) + (LZMA_LP * 9) + (LZMA_LC)))
+    if (Properties != LzSupportedProperties)
     {
         return false;
     }

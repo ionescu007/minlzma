@@ -72,6 +72,7 @@ void RcSetDefaultProbability(uint16_t* Probability);
 //
 bool LzDecode(void);
 bool LzInitialize(uint8_t Properties);
+extern const uint8_t LzSupportedProperties;
 
 //
 // LZMA2 Decoder
