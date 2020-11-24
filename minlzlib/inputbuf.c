@@ -33,10 +33,11 @@ Environment:
 typedef struct _BUFFER_STATE
 {
     //
-    // Start of the buffer, current offset, and total input size
+    // Start of the buffer, current offset, current packet end, and total input size
     //
     uint8_t* Buffer;
     uint32_t Offset;
+    uint32_t SoftLimit;
     uint32_t Size;
 } BUFFER_STATE, * PBUFFER_STATE;
 BUFFER_STATE In;
@@ -61,6 +62,27 @@ BfAlign (
 }
 
 bool
+BfSetSoftLimit (
+    uint32_t Remaining
+    )
+{
+    if (In.Size - In.Offset < Remaining)
+    {
+        return false;
+    }
+    In.SoftLimit = In.Offset + Remaining;
+    return true;
+}
+
+void
+BfResetSoftLimit (
+    void
+    )
+{
+    In.SoftLimit = In.Size;
+}
+
+bool
 BfSeek (
     uint32_t Length,
     uint8_t** Bytes
@@ -70,7 +92,7 @@ BfSeek (
     // Make sure the input buffer has enough space to seek the desired size, if
     // it does, return the current position and then seek past the desired size
     //
-    if ((In.Offset + Length) > In.Size)
+    if ((In.Offset + Length) > In.SoftLimit)
     {
         *Bytes = 0;
         return false;
@@ -109,5 +131,6 @@ BfInitialize (
     //
     In.Buffer = InputBuffer;
     In.Size = InputSize;
+    In.SoftLimit = InputSize;
     In.Offset = 0;
 }

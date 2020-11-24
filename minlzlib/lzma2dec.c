@@ -37,14 +37,6 @@ Lz2DecodeChunk (
     uint32_t bytesProcessed;
 
     //
-    // Make sure we always have space for the biggest possible LZMA sequence
-    //
-    if (CompressedSize < LZMA_MAX_SEQUENCE_SIZE)
-    {
-        return false;
-    }
-
-    //
     // Go and decode this chunk, sequence by sequence
     //
     if (!LzDecode())
@@ -193,6 +185,16 @@ Lz2DecodeStream (
         }
 
         //
+        // Record how many bytes are left in this sequence as our SoftLimit for
+        // the other operations. This allows us to omit most range chencking
+        // logic in rangedec.c.
+        //
+        if (!BfSetSoftLimit(compressedSize))
+        {
+            break;
+        }
+
+        //
         // Read the initial range and code bytes to initialize the arithmetic
         // coding decoder, and let it know how much input data exists. We've
         // already validated that this much space exists in the input buffer.
@@ -209,6 +211,8 @@ Lz2DecodeStream (
         {
             break;
         }
+
+        BfResetSoftLimit();
     }
     return false;
 }

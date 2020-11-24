@@ -25,7 +25,7 @@ Environment:
 #pragma once
 
 //
-// C Standard Headers 
+// C Standard Headers
 //
 #include <stddef.h>
 #include <stdint.h>
@@ -39,6 +39,8 @@ bool BfRead(uint8_t* Byte);
 bool BfSeek(uint32_t Length, uint8_t** Bytes);
 bool BfAlign(void);
 void BfInitialize(uint8_t* InputBuffer, uint32_t InputSize);
+bool BfSetSoftLimit(uint32_t Remaining);
+void BfResetSoftLimit(void);
 
 //
 // Dictionary (History Buffer) Management
