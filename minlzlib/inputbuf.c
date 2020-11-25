@@ -66,7 +66,7 @@ BfSetSoftLimit (
     uint32_t Remaining
     )
 {
-    if (In.Size - In.Offset < Remaining)
+    if ((In.Size - In.Offset) < Remaining)
     {
         return false;
     }

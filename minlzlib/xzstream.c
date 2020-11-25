@@ -44,6 +44,8 @@ typedef enum _XZ_DECODE_BLOCK_HEADER_RESULT {
     XzBlockHeaderNoBlock = 2
 } XZ_DECODE_BLOCK_HEADER_RESULT;
 
+const uint8_t k_XzLzma2FilterIdentifier = 0x21;
+
 #ifdef _WIN32
 void __security_check_cookie(_In_ uintptr_t _StackCookie) { (void)(_StackCookie); }
 #endif
@@ -389,7 +391,8 @@ XzDecodeBlockHeader (
         //
         // That's no block! That's an index!
         //
-        BfSeek((uint32_t)(-(uint16_t)sizeof(*blockHeader)), (uint8_t**)&blockHeader);
+        BfSeek((uint32_t)(-(uint16_t)sizeof(*blockHeader)),
+               (uint8_t**)&blockHeader);
         return XzBlockHeaderNoBlock;
     }
 #ifdef MINLZ_META_CHECKS
@@ -413,7 +416,7 @@ XzDecodeBlockHeader (
     //
     // Validate that the only filter is the LZMA2 filter
     //
-    if (blockHeader->LzmaFlags.Id != 0x21)
+    if (blockHeader->LzmaFlags.Id != k_XzLzma2FilterIdentifier)
     {
         return XzBlockHeaderFail;
     }
@@ -421,7 +424,8 @@ XzDecodeBlockHeader (
     //
     // With the expected number of property bytes
     //
-    if (blockHeader->LzmaFlags.Size != sizeof(blockHeader->LzmaFlags.u.Properties))
+    if (blockHeader->LzmaFlags.Size
+        != sizeof(blockHeader->LzmaFlags.u.Properties))
     {
         return XzBlockHeaderFail;
     }

@@ -114,7 +114,8 @@ DECODER_STATE Decoder;
 // pick the arithmetic-coded bit tree used for literal coding. The 0 means
 // this selection will _not_ be dependent on the position in the buffer.
 //
-const uint8_t LzSupportedProperties = (LZMA_PB * 45) + (LZMA_LP * 9) + (LZMA_LC);
+const uint8_t k_LzSupportedProperties =
+    (LZMA_PB * 45) + (LZMA_LP * 9) + (LZMA_LC);
 
 void
 LzSetLiteral (
@@ -592,16 +593,11 @@ LzDecode (
     return (Decoder.Len == 0);
 }
 
-bool
-LzInitialize (
-    uint8_t Properties
+void
+LzResetState (
+    void
     )
 {
-    if (Properties != LzSupportedProperties)
-    {
-        return false;
-    }
-
     //
     // Initialize decoder to default state in case we're called more than once.
     // The LZMA "Bit Model" is an adaptive arithmetic-coded probability-based
@@ -615,5 +611,17 @@ LzInitialize (
     {
         RcSetDefaultProbability(&Decoder.u.RawProbabilities[i]);
     }
+}
+
+bool
+LzInitialize (
+    uint8_t Properties
+    )
+{
+    if (Properties != k_LzSupportedProperties)
+    {
+        return false;
+    }
+    LzResetState();
     return true;
 }
