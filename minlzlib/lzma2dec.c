@@ -37,14 +37,6 @@ Lz2DecodeChunk (
     uint32_t bytesProcessed;
 
     //
-    // Make sure we always have space for the biggest possible LZMA sequence
-    //
-    if (CompressedSize < LZMA_MAX_SEQUENCE_SIZE)
-    {
-        return false;
-    }
-
-    //
     // Go and decode this chunk, sequence by sequence
     //
     if (!LzDecode())
@@ -139,7 +131,9 @@ Lz2DecodeStream (
         //
         // Check if the full LZMA state needs to be reset, which must happen at
         // the start of stream. Also check for a property reset, which occurs
-        // when an LZMA stream follows an uncompressed stream.
+        // when an LZMA stream follows an uncompressed stream. Separately,
+        // check for a state reset without a property byte (happens rarely,
+        // but does happen in a few compressed streams).
         //
         if ((controlByte.u.Lzma.ResetState == Lzma2FullReset) ||
             (controlByte.u.Lzma.ResetState == Lzma2PropertyReset))
@@ -152,10 +146,14 @@ Lz2DecodeStream (
                 break;
             }
         }
-        else if (controlByte.u.Lzma.ResetState != Lzma2NoReset)
+        else if (controlByte.u.Lzma.ResetState == Lzma2SimpleReset)
         {
-            break;
+            LzResetState();
         }
+        //
+        // else controlByte.u.Lzma.ResetState == Lzma2NoReset, since a two-bit
+        // field only has four possible values
+        //
 
         //
         // Don't do any decompression if the caller only wants to know the size
@@ -193,6 +191,16 @@ Lz2DecodeStream (
         }
 
         //
+        // Record how many bytes are left in this sequence as our SoftLimit for
+        // the other operations. This allows us to omit most range checking
+        // logic in rangedec.c. This soft limit lasts until reset below.
+        //
+        if (!BfSetSoftLimit(compressedSize))
+        {
+            break;
+        }
+
+        //
         // Read the initial range and code bytes to initialize the arithmetic
         // coding decoder, and let it know how much input data exists. We've
         // already validated that this much space exists in the input buffer.
@@ -209,6 +217,12 @@ Lz2DecodeStream (
         {
             break;
         }
+
+        //
+        // Having decoded that chunk, reset our soft limit (to the full
+        // input stream) so we can read the next chunk.
+        //
+        BfResetSoftLimit();
     }
     return false;
 }
