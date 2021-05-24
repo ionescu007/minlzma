@@ -475,7 +475,7 @@ XzDecode (
     // Initialize the input buffer descriptor and history buffer (dictionary)
     //
     BfInitialize(InputBuffer, InputSize);
-    DtInitialize(OutputBuffer, *OutputSize);
+    DtInitialize(OutputBuffer, *OutputSize, 0);
 
     //
     // Decode the stream header for check for validity

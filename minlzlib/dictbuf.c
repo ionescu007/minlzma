@@ -47,14 +47,15 @@ DICTIONARY_STATE Dictionary;
 void
 DtInitialize (
     uint8_t* HistoryBuffer,
-    uint32_t Size
+    uint32_t Size,
+    uint32_t Offset
     )
 {
     //
     // Initialize the buffer and reset the position
     //
     Dictionary.Buffer = HistoryBuffer;
-    Dictionary.Offset = 0;
+    Dictionary.Offset = Offset;
     Dictionary.BufferSize = Size;
 }
 

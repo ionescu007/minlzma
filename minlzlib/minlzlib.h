@@ -46,7 +46,7 @@ void BfResetSoftLimit(void);
 // Dictionary (History Buffer) Management
 //
 bool DtRepeatSymbol(uint32_t Length, uint32_t Distance);
-void DtInitialize(uint8_t* HistoryBuffer, uint32_t Position);
+void DtInitialize(uint8_t* HistoryBuffer, uint32_t Position, uint32_t Offset);
 bool DtSetLimit(uint32_t Limit);
 void DtPutSymbol(uint8_t Symbol);
 uint8_t DtGetSymbol(uint32_t Distance);
@@ -78,6 +78,7 @@ void LzResetState(void);
 // LZMA2 Decoder
 //
 bool Lz2DecodeStream(uint32_t* BytesProcessed, bool GetSizeOnly);
+
 #ifdef MINLZ_INTEGRITY_CHECKS
 //
 // Checksum Management
