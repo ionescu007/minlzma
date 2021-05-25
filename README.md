@@ -102,7 +102,13 @@ Note that while these assumptions may seem overly restrictive, they correspond t
 * `MINLZ_META_CHECKS` -- This option configures whether or nor the input files should be fully trusted to conform to the requirements of `minlzlib` and do not require checking the various stream header flags or block header flags and other attributes. Additionally, the index and stream footer are completely ignored. This mode results in a sub-10KB library that can decode 100MB/s on a ~3.6GHz single-processor. This is only recommended if the input file is wrapped or delivered in a cryptographically tamper-proof secure channel or container (such as a signed hash).
 
 # Usage
-TODO
+```
+minlzdec v.1.1.5 -- http://ionescu007.github.io/minlzma
+Copyright(c) 2020-2021 Alex Ionescu (@aionescu)
+
+Usage: minlzdec [INPUT FILE] [OUTPUT FILE]
+Decompress INPUT FILE in the .xz format into OUTPUT FILE.
+```
 
 # Build Instructions
 Within Visual Studio 2019, you can use File->Open->CMake and point it at the top-level `CMakeFiles.txt`, and choose either the `win-amd64` target or the `win-release-amd64` target. The former builds a binary with no optimizations, the later builds a fully optimized binary (for speed) with debug symbols.
