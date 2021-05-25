@@ -67,8 +67,8 @@ typedef struct _RANGE_DECODER_STATE
     //
     // Start and end location of the current stream's range encoder buffer
     //
-    uint8_t* Start;
-    uint8_t* Limit;
+    const uint8_t* Start;
+    const uint8_t* Limit;
     //
     // Current probability range and 32-bit arithmetic encoded sequence code
     //
@@ -83,7 +83,7 @@ RcInitialize (
     )
 {
     uint8_t i, rcByte;
-    uint8_t* chunkEnd;
+    const uint8_t* chunkEnd;
 
     //
     // Make sure that the input buffer has enough space for the requirements of
@@ -127,7 +127,7 @@ RcCanRead (
     void
     )
 {
-    uint8_t* pos;
+    const uint8_t* pos;
     //
     // We can keep reading symbols as long as we haven't reached the end of the
     // input buffer yet.
@@ -141,7 +141,7 @@ RcIsComplete (
     uint32_t* BytesProcessed
     )
 {
-    uint8_t* pos;
+    const uint8_t* pos;
     //
     // When the last symbol has been decoded, the last code should be zero as
     // there is nothing left to describe. Return the offset in the buffer where

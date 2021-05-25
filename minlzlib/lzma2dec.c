@@ -72,7 +72,7 @@ Lz2DecodeStream (
     bool GetSizeOnly
     )
 {
-    uint8_t* inBytes;
+    const uint8_t* inBytes;
     LZMA2_CONTROL_BYTE controlByte;
     uint8_t propertyByte;
     uint32_t rawSize;
@@ -150,10 +150,10 @@ Lz2DecodeStream (
         {
             LzResetState();
         }
-        //
-        // else controlByte.u.Lzma.ResetState == Lzma2NoReset, since a two-bit
-        // field only has four possible values
-        //
+        else if (controlByte.u.Lzma.ResetState == Lzma2NoReset)
+        {
+            ;
+        }
 
         //
         // Don't do any decompression if the caller only wants to know the size

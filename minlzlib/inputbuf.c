@@ -35,7 +35,7 @@ typedef struct _BUFFER_STATE
     //
     // Start of the buffer, current offset, current packet end, and total input size
     //
-    uint8_t* Buffer;
+    const uint8_t* Buffer;
     uint32_t Offset;
     uint32_t SoftLimit;
     uint32_t Size;
@@ -85,7 +85,7 @@ BfResetSoftLimit (
 bool
 BfSeek (
     uint32_t Length,
-    uint8_t** Bytes
+    const uint8_t** Bytes
     )
 {
     //
@@ -107,7 +107,7 @@ BfRead (
     uint8_t* Byte
     )
 {
-    uint8_t* pByte;
+    const uint8_t* pByte;
     //
     // Seek past the byte and read it
     //
@@ -122,7 +122,7 @@ BfRead (
 
 void
 BfInitialize (
-    uint8_t* InputBuffer,
+    const uint8_t* InputBuffer,
     uint32_t InputSize
     )
 {

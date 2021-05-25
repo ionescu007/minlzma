@@ -18,13 +18,30 @@
  *
  * @return         true - The input buffer was fully decompressed in OutputBuffer,
  *                 or no decompression was requested, the size of the decompressed
- *                 buffer was returned in OutputSIze.
+ *                 buffer was returned in OutputSize.
  *                 false - A failure occurred during the decompression process.
  */
 bool
 XzDecode (
-    uint8_t* InputBuffer,
+    const uint8_t* InputBuffer,
     uint32_t InputSize,
     uint8_t* OutputBuffer,
     uint32_t* OutputSize
+    );
+
+/*!
+ * @brief          Returns if the last call to XzDecode resulted in an integrity
+ *                 error.
+ *
+ * @detail         Checksum errors can indicate either the uncompressed block's
+ *                 CRC-32 or CRC-64 checksum being corrupt, or any of the meta-
+ *                 data CRC-32 checksums in the header, footer, or index.
+ *
+ * @return         true - A checksum error was encountered at some point.
+ *                 false - No error was encountered or integrity checks are not
+ *                 enabled.
+ */
+bool
+XzChecksumError (
+    void
     );

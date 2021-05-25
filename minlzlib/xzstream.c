@@ -31,21 +31,6 @@ Environment:
 #include "minlzlib.h"
 #include "xzstream.h"
 
-//
-// XzDecodeBlockHeader can return "I successfully found a block",
-// "I failed/bad block header", or "there was no block header".
-// Though minlzlib explicitly only claims to handle files with a
-// single block, it needs to also handle files with no blocks at all.
-// (Produced by "xz" when compressing an empty input file)
-//
-typedef enum _XZ_DECODE_BLOCK_HEADER_RESULT {
-    XzBlockHeaderFail = 0,
-    XzBlockHeaderSuccess = 1,
-    XzBlockHeaderNoBlock = 2
-} XZ_DECODE_BLOCK_HEADER_RESULT;
-
-const uint8_t k_XzLzma2FilterIdentifier = 0x21;
-
 #ifdef _WIN32
 void __security_check_cookie(_In_ uintptr_t _StackCookie) { (void)(_StackCookie); }
 #endif
@@ -62,11 +47,16 @@ typedef struct _CONTAINER_STATE
     uint32_t HeaderSize;
     uint32_t IndexSize;
     //
-    // Size of the compressed block and its checksum
+    // Size of the uncompressed block
     //
     uint32_t UncompressedBlockSize;
     uint32_t UnpaddedBlockSize;
+    //
+    // Checksum data
+    //
     uint32_t ChecksumSize;
+    uint8_t ChecksumType;
+    bool ChecksumError;
 } CONTAINER_STATE, * PCONTAINER_STATE;
 CONTAINER_STATE Container;
 #endif
@@ -126,9 +116,9 @@ XzDecodeIndex (
     )
 {
     uint32_t vli;
-    uint8_t* indexStart;
-    uint8_t* indexEnd;
-    uint32_t* pCrc32;
+    const uint8_t* indexStart;
+    const uint8_t* indexEnd;
+    const uint32_t* pCrc32;
     uint8_t indexByte;
 
     //
@@ -185,7 +175,7 @@ XzDecodeIndex (
     //
     // Read the CRC32, which is not part of the index size
     //
-    if (!BfSeek(sizeof(*pCrc32), (uint8_t**)&pCrc32))
+    if (!BfSeek(sizeof(*pCrc32), (const uint8_t**)&pCrc32))
     {
         return false;
     }
@@ -195,7 +185,7 @@ XzDecodeIndex (
     //
     if (Crc32(indexStart, Container.IndexSize) != *pCrc32)
     {
-        return false;
+        Container.ChecksumError = true;
     }
 #endif
     return true;
@@ -211,7 +201,7 @@ XzDecodeStreamFooter (
     //
     // Seek past the footer, making sure we have space in the input stream
     //
-    if (!BfSeek(sizeof(*streamFooter), (uint8_t**)&streamFooter))
+    if (!BfSeek(sizeof(*streamFooter), (const uint8_t**)&streamFooter))
     {
         return false;
     }
@@ -219,7 +209,7 @@ XzDecodeStreamFooter (
     //
     // Validate the footer magic
     //
-    if (streamFooter->Magic != 'ZY')
+    if (streamFooter->Magic != k_XzStreamFooterMagic)
     {
         return false;
     }
@@ -227,9 +217,9 @@ XzDecodeStreamFooter (
     //
     // Validate no flags other than checksum type are set
     //
-    if ((streamFooter->u.Flags != 0) &&
-        ((streamFooter->u.s.CheckType != XzCheckTypeCrc32) &&
-         (streamFooter->u.s.CheckType != XzCheckTypeNone)))
+    if ((streamFooter->u.s.ReservedFlags != 0) ||
+        (streamFooter->u.s.ReservedType != 0) ||
+        (streamFooter->u.s.CheckType != Container.ChecksumType))
     {
         return false;
     }
@@ -246,14 +236,37 @@ XzDecodeStreamFooter (
     // Compute the footer's CRC32 and make sure it's not corrupted
     //
     if (Crc32(&streamFooter->BackwardSize,
-               sizeof(streamFooter->BackwardSize) +
-               sizeof(streamFooter->u.Flags)) !=
+              sizeof(streamFooter->BackwardSize) +
+              sizeof(streamFooter->u.Flags)) !=
         streamFooter->Crc32)
     {
-        return false;
+        Container.ChecksumError = true;
     }
 #endif
     return true;
+}
+#endif
+
+#if MINLZ_INTEGRITY_CHECKS
+bool
+XzCrc (
+    uint8_t* OutputBuffer,
+    uint32_t BlockSize,
+    const uint8_t* InputEnd
+    )
+{
+    //
+    // Compute the appropriate checksum and compare it with the expected result
+    //
+    switch (Container.ChecksumType)
+    {
+    case XzCheckTypeCrc32:
+        return Crc32(OutputBuffer, BlockSize) != *(uint32_t*)InputEnd;
+    case XzCheckTypeCrc64:
+        return Crc64(OutputBuffer, BlockSize) != *(uint64_t*)InputEnd;
+    default:
+        return false;
+    }
 }
 #endif
 
@@ -264,7 +277,7 @@ XzDecodeBlock (
     )
 {
 #ifdef MINLZ_META_CHECKS
-    uint8_t *inputStart, *inputEnd;
+    const uint8_t *inputStart, *inputEnd;
 #endif
     //
     // Decode the LZMA2 stream. If full integrity checking is enabled, also
@@ -281,7 +294,7 @@ XzDecodeBlock (
 #ifdef MINLZ_META_CHECKS
     BfSeek(0, &inputEnd);
     Container.UnpaddedBlockSize = Container.HeaderSize +
-                                   (uint32_t)(inputEnd - inputStart);
+                                  (uint32_t)(inputEnd - inputStart);
     Container.UncompressedBlockSize = *BlockSize;
 #endif
     //
@@ -291,12 +304,12 @@ XzDecodeBlock (
     {
         return false;
     }
-#if defined(MINLZ_INTEGRITY_CHECKS) || defined(MINLZ_META_CHECKS)
+#ifdef MINLZ_META_CHECKS
     //
     // Finally, move past the size of the checksum if any, then compare it with
-    // with the actual CRC32 of the block, if integrity checks are enabled. If
-    // meta checks are enabled, update the block size so the index checking can
-    // validate it.
+    // with the actual checksum of the block, if integrity checks are enabled.
+    // If meta checks are enabled, update the block size so the index checking
+    // can validate it.
     //
     if (!BfSeek(Container.ChecksumSize, &inputEnd))
     {
@@ -305,10 +318,9 @@ XzDecodeBlock (
 #endif
     (void)(OutputBuffer);
 #ifdef MINLZ_INTEGRITY_CHECKS
-    if ((OutputBuffer != NULL) &&
-        (Crc32(OutputBuffer, *BlockSize) != *(uint32_t*)inputEnd))
+    if ((OutputBuffer != NULL) && !(XzCrc(OutputBuffer, *BlockSize, inputEnd)))
     {
-        return false;
+        Container.ChecksumError = true;
     }
 #endif
 #ifdef MINLZ_META_CHECKS
@@ -327,7 +339,7 @@ XzDecodeStreamHeader (
     //
     // Seek past the header, making sure we have space in the input stream
     //
-    if (!BfSeek(sizeof(*streamHeader), (uint8_t**)&streamHeader))
+    if (!BfSeek(sizeof(*streamHeader), (const uint8_t**)&streamHeader))
     {
         return false;
     }
@@ -335,27 +347,33 @@ XzDecodeStreamHeader (
     //
     // Validate the header magic
     //
-    if ((*(uint32_t*)&streamHeader->Magic[1] != 'ZXz7') ||
-        (streamHeader->Magic[0] != 0xFD) ||
-        (streamHeader->Magic[5] != 0x00))
+    if ((*(uint32_t*)&streamHeader->Magic[1] != k_XzStreamHeaderMagic1) ||
+        (streamHeader->Magic[0] != k_XzStreamHeaderMagic0) ||
+        (streamHeader->Magic[5] != k_XzStreamHeaderMagic5))
     {
         return false;
     }
 
     //
-    // Validate no flags other than checksum type are set
+    // Validate the header flags
     //
-    if ((streamHeader->u.Flags != 0) &&
-        ((streamHeader->u.s.CheckType != XzCheckTypeCrc32) &&
-         (streamHeader->u.s.CheckType != XzCheckTypeNone)))
+    if ((streamHeader->u.s.ReservedFlags != 0) ||
+        (streamHeader->u.s.ReservedType != 0))
     {
         return false;
     }
 
     //
-    // Remember that a checksum might come at the end of the block later
+    // Save checksum type and compute pre-defined size for it
     //
-    Container.ChecksumSize = streamHeader->u.s.CheckType * 4;
+    Container.ChecksumType = streamHeader->u.s.CheckType;
+    Container.ChecksumSize = k_XzBlockCheckSizes[streamHeader->u.s.CheckType];
+    if ((Container.ChecksumType != XzCheckTypeNone) &&
+        (Container.ChecksumType != XzCheckTypeCrc32) &&
+        (Container.ChecksumType != XzCheckTypeCrc64))
+    {
+        Container.ChecksumError = true;
+    }
 #endif
 #ifdef MINLZ_INTEGRITY_CHECKS
     //
@@ -364,36 +382,32 @@ XzDecodeStreamHeader (
     if (Crc32(&streamHeader->u.Flags, sizeof(streamHeader->u.Flags)) !=
         streamHeader->Crc32)
     {
-        return false;
+        Container.ChecksumError = true;
     }
 #endif
     return true;
 }
 
-XZ_DECODE_BLOCK_HEADER_RESULT
+bool
 XzDecodeBlockHeader (
     void
     )
 {
     PXZ_BLOCK_HEADER blockHeader;
 #ifdef MINLZ_META_CHECKS
-    uint32_t size;
+    uint32_t dictionarySize;
 #endif
     //
-    // Seek past the header, making sure we have space in the input stream
+    // Seek past the header, making sure we have space in the input stream. If
+    // the header indicates a size of 0, then this is a blockless (empty) file
+    // and this is actually an index. Undo the seek so we can parse the index.
     //
-    if (!BfSeek(sizeof(*blockHeader), (uint8_t**)&blockHeader))
+    if (!BfSeek(sizeof(*blockHeader), (const uint8_t**)&blockHeader) ||
+        (blockHeader->Size == 0))
     {
-        return XzBlockHeaderFail;
-    }
-    if (blockHeader->Size == 0)
-    {
-        //
-        // That's no block! That's an index!
-        //
         BfSeek((uint32_t)(-(uint16_t)sizeof(*blockHeader)),
-               (uint8_t**)&blockHeader);
-        return XzBlockHeaderNoBlock;
+               (const uint8_t**)&blockHeader);
+        return false;
     }
 #ifdef MINLZ_META_CHECKS
     //
@@ -402,7 +416,7 @@ XzDecodeBlockHeader (
     Container.HeaderSize = (blockHeader->Size + 1) * 4;
     if (Container.HeaderSize != sizeof(*blockHeader))
     {
-        return XzBlockHeaderFail;
+        return false;
     }
 
     //
@@ -410,7 +424,7 @@ XzDecodeBlockHeader (
     //
     if (blockHeader->u.Flags != 0)
     {
-        return XzBlockHeaderFail;
+        return false;
     }
 
     //
@@ -418,7 +432,7 @@ XzDecodeBlockHeader (
     //
     if (blockHeader->LzmaFlags.Id != k_XzLzma2FilterIdentifier)
     {
-        return XzBlockHeaderFail;
+        return false;
     }
 
     //
@@ -427,7 +441,7 @@ XzDecodeBlockHeader (
     if (blockHeader->LzmaFlags.Size
         != sizeof(blockHeader->LzmaFlags.u.Properties))
     {
-        return XzBlockHeaderFail;
+        return false;
     }
 
     //
@@ -443,10 +457,10 @@ XzDecodeBlockHeader (
     // file. If callers pass in a buffer size that's too small, decoding will
     // fail at later stages anyway, and that's incorrect use of minlzlib.
     //
-    size = blockHeader->LzmaFlags.u.s.DictionarySize;
-    if (size > 39)
+    dictionarySize = blockHeader->LzmaFlags.u.s.DictionarySize;
+    if (dictionarySize > 39)
     {
-        return XzBlockHeaderFail;
+        return false;
     }
 #ifdef MINLZ_INTEGRITY_CHECKS
     //
@@ -456,16 +470,16 @@ XzDecodeBlockHeader (
               Container.HeaderSize - sizeof(blockHeader->Crc32)) !=
         blockHeader->Crc32)
     {
-        return XzBlockHeaderFail;
+        Container.ChecksumError = true;
     }
 #endif
 #endif
-    return XzBlockHeaderSuccess;
+    return true;
 }
 
 bool
 XzDecode (
-    uint8_t* InputBuffer,
+    const uint8_t* InputBuffer,
     uint32_t InputSize,
     uint8_t* OutputBuffer,
     uint32_t* OutputSize
@@ -478,7 +492,7 @@ XzDecode (
     DtInitialize(OutputBuffer, *OutputSize, 0);
 
     //
-    // Decode the stream header for check for validity
+    // Decode the stream header to check for validity
     //
     if (!XzDecodeStreamHeader())
     {
@@ -486,26 +500,20 @@ XzDecode (
     }
 
     //
-    // Decode the block header for check for validity
+    // Decode the block header to check for validity. If it appears valid, go
+    // decode the block. Otherwise, this may be a blockless (empty input) file.
     //
-    switch (XzDecodeBlockHeader())
+    if (XzDecodeBlockHeader())
     {
-    case XzBlockHeaderFail:
-        return false;
-    case XzBlockHeaderNoBlock:
-        *OutputSize = 0;
-        break;
-    case XzBlockHeaderSuccess:
-        //
-        // Decode the actual block
-        //
         if (!XzDecodeBlock(OutputBuffer, OutputSize))
         {
             return false;
         }
-        break;
     }
-
+    else
+    {
+        *OutputSize = 0;
+    }
 #ifdef MINLZ_META_CHECKS
     //
     // Decode the index for validity checks
@@ -524,4 +532,19 @@ XzDecode (
     }
 #endif
     return true;
+}
+
+bool
+XzChecksumError (
+    void
+    )
+{
+    //
+    // Return to an external caller if a checksum error was encountered
+    //
+#ifdef MINLZ_INTEGRITY_CHECKS
+    return Container.ChecksumError;
+#else
+    return false;
+#endif
 }

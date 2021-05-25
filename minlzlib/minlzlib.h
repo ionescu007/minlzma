@@ -36,9 +36,9 @@ Environment:
 // Input Buffer Management
 //
 bool BfRead(uint8_t* Byte);
-bool BfSeek(uint32_t Length, uint8_t** Bytes);
+bool BfSeek(uint32_t Length, const uint8_t** Bytes);
 bool BfAlign(void);
-void BfInitialize(uint8_t* InputBuffer, uint32_t InputSize);
+void BfInitialize(const uint8_t* InputBuffer, uint32_t InputSize);
 bool BfSetSoftLimit(uint32_t Remaining);
 void BfResetSoftLimit(void);
 
@@ -81,8 +81,15 @@ bool Lz2DecodeStream(uint32_t* BytesProcessed, bool GetSizeOnly);
 
 #ifdef MINLZ_INTEGRITY_CHECKS
 //
+// Integrity checks require metadata parsing and validation
+//
+#define MINLZ_META_CHECKS 1
+
+//
 // Checksum Management
 //
-uint32_t OsComputeCrc32(uint32_t Initial, const uint8_t* Data, uint32_t Length);
-#define Crc32(Buffer, Length) OsComputeCrc32(0, (const uint8_t*)Buffer, Length)
+uint32_t XzCrc32(uint32_t Crc, const uint8_t* Buffer, uint32_t Length);
+uint64_t XzCrc64(uint64_t Crc, const uint8_t* Buffer, uint32_t Length);
+#define Crc32(Buffer, Length) XzCrc32(0, (const uint8_t*)Buffer, Length)
+#define Crc64(Buffer, Length) XzCrc64(0, (const uint8_t*)Buffer, Length)
 #endif

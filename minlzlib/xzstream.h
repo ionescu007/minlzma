@@ -24,7 +24,35 @@ Environment:
 --*/
 
 #pragma once
+#ifdef _MSC_VER
 #pragma warning(disable:4214)
+#endif
+
+//
+// This is the filter ID for LZMA2 as part of an XZ block header's "LzmaFlags"
+//
+const uint8_t k_XzLzma2FilterIdentifier = 0x21;
+
+//
+// These are the magic bytes at the beginning of an XZ stream footer
+//
+const uint16_t k_XzStreamFooterMagic = 'ZY';
+
+//
+// These are the magic bytes at the beginning of an XZ stream header
+//
+const uint8_t k_XzStreamHeaderMagic0 = 0xFD;
+const uint32_t k_XzStreamHeaderMagic1 = 'ZXz7';
+const uint8_t k_XzStreamHeaderMagic5 = 0x00;
+
+//
+// XZ Blocks can be checksumed with algorithms of one of these possible sizes,
+// based on the 4 bits indicated in the "CheckType" field of the stream header.
+//
+const uint8_t k_XzBlockCheckSizes[] =
+{
+    0, 4, 4, 4, 8, 8, 8, 16, 16, 16, 32, 32, 32, 64, 64, 64
+};
 
 //
 // XZ streams encode certain numbers as "variable length integers", with 7 bits

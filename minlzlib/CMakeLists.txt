@@ -1,4 +1,4 @@
-﻿set(MINLZLIB_SOURCES "inputbuf.c" "dictbuf.c" "lzma2dec.c" "lzmadec.c" "rangedec.c" "xzstream.c" "lzmadec.h" "xzstream.h" "minlzlib.h")
+﻿set(MINLZLIB_SOURCES "inputbuf.c" "dictbuf.c" "lzma2dec.c" "lzmadec.c" "rangedec.c" "xzcrc.c" "xzstream.c" "lzmadec.h" "xzstream.h" "minlzlib.h")
 add_library(minlz_obj OBJECT ${MINLZLIB_SOURCES})
 set_target_properties(minlz_obj PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
 

@@ -22,6 +22,7 @@ main (
     uint32_t inputSize, outputSize;
     uint8_t* inputBuffer;
     uint8_t* outputBuffer;
+    char continueResult;
     struct stat stat;
     bool decodeResult;
 
@@ -30,8 +31,8 @@ main (
     inputBuffer = NULL;
     outputBuffer = NULL;
 
-    printf("minlzdec v.1.1.1 -- http://ionescu007.github.io/minlzma\n");
-    printf("Copyright(c) 2020 Alex Ionescu (@aionescu)\n\n");
+    printf("minlzdec v.1.1.5 -- http://ionescu007.github.io/minlzma\n");
+    printf("Copyright(c) 2020-2021 Alex Ionescu (@aionescu)\n\n");
     if (ArgumentCount != 3)
     {
         printf("Usage: minlzdec [INPUT FILE] [OUTPUT FILE]\n");
@@ -73,6 +74,16 @@ main (
         printf("Decoding failed after %d bytes\n", outputSize);
         errno = ENOTSUP;
         goto Cleanup;
+    }
+    else if (XzChecksumError())
+    {
+        printf("WARNING: Checksum error was encountered, continue decompression? [Y/N]\n");
+        fgets(&continueResult, 1, stdin);
+        if (continueResult != L'Y')
+        {
+            errno = EIO;
+            goto Cleanup;
+        }
     }
 
     printf("Decompressed file will be %d bytes (%f%% ratio)\n",

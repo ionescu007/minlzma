@@ -23,7 +23,9 @@ Environment:
 --*/
 
 #pragma once
+#ifdef _MSC_VER
 #pragma warning(disable:4214)
+#endif
 
 //
 // The most complex LZMA sequence possible is a "match" sequence where the
