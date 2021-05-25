@@ -10,7 +10,8 @@ The Minimal LZMA (`minlzma`) project aims to provide a minimalistic, cross-platf
  *
  * @detail         The XZ stream must contain a single block with an LZMA2 filter
  *                 and no BJC2 filters, using default LZMA properties, and using
- *                 either CRC32 or None as the checksum type.
+ *                 either CRC-64, CRC-32, or None as the checksum type (unknown
+ *                 checksum algorithms will be safely ignored, however).
  *
  * @param[in]      InputBuffer - A fully formed buffer containing the XZ stream.
  * @param[in]      InputSize - The size of the input buffer.
@@ -28,10 +29,28 @@ The Minimal LZMA (`minlzma`) project aims to provide a minimalistic, cross-platf
  */
 bool
 XzDecode (
-    uint8_t* InputBuffer,
+    const uint8_t* InputBuffer,
     uint32_t InputSize,
     uint8_t* OutputBuffer,
     uint32_t* OutputSize
+    );
+~~~
+
+~~~ c
+ * @brief          Returns if the last call to XzDecode resulted in an integrity
+ *                 error.
+ *
+ * @detail         Checksum errors can indicate either the uncompressed block's
+ *                 CRC-32 or CRC-64 checksum being corrupt, or any of the meta-
+ *                 data CRC-32 checksums in the header, footer, or index.
+ *
+ * @return         true - A checksum error was encountered at some point.
+ *                 false - No error was encountered or integrity checks are not
+ *                 enabled.
+ */
+bool
+XzChecksumError (
+    void
     );
 ~~~
 
@@ -44,7 +63,7 @@ In order to provide its vast simplicity, fast performance, minimal source, and s
 * The LZMA2 property byte must indicate the LZMA properties `lc = 3`, `pb = 2`, `lc = 0`
 * The XZ block must not have the optional "compressed size" and/or "uncompressed size" VLI metadata
 
-Note that while these assumptions may seem overly restrictive, they correspond to the usual files produced by `xzutils`, `7-zip` when choosing XZ as the format, and the `Python` `LZMA` module. Most encoders do not support the vast majority of XZ/LZMA2's purported capabilities, such as SHA256 or CRC64, multiple blocks, etc.
+Note that while these assumptions may seem overly restrictive, they correspond to the usual files produced by `xzutils`, `7-zip` when choosing XZ as the format, and the `Python` `LZMA` module. Most encoders do not support the vast majority of XZ/LZMA2's purported capabilities such as multiple blocks, streaming, or multi-threading.
 
 # Testing (Linux)
 
@@ -77,7 +96,7 @@ Note that while these assumptions may seem overly restrictive, they correspond t
   - `Get-FileHash` output file
 
 # Compile-time Options
-* `MINLZ_INTEGRITY_CHECKS` -- This option configures whether or not CRC32 checksumming of the XZ data structures and compressed block should be performed, or skipped. Removing this functionality gains an increase in performance which scales with the size of the input file. It results in a minimal increase in library size, and also requires the implementation of a platform-specific CRC32 checksum function that correponds to the following prototype: `uint32_t OsComputeCrc32(uint32_t Initial, const uint8_t* Data, uint32_t Length);`
+* `MINLZ_INTEGRITY_CHECKS` -- This option configures whether or not CRC32 checksumming of the XZ data structures and compressed block should be performed, or skipped. Removing this functionality gains an increase in performance which scales with the size of the input file. It results in a minimal increase in library size and will include the XZ/CRC-32 and XZ/CRC-64 checksum algorithms. Other algorithms will be safely ignored. This option also enables `MINLZ_META_CHECKS` described below.
 
 * `MINLZ_META_CHECKS` -- This option configures whether or nor the input files should be fully trusted to conform to the requirements of `minlzlib` and do not require checking the various stream header flags or block header flags and other attributes. Additionally, the index and stream footer are completely ignored. This mode results in a sub-10KB library that can decode 100MB/s on a ~3.6GHz single-processor. This is only recommended if the input file is wrapped or delivered in a cryptographically tamper-proof secure channel or container (such as a signed hash).
 
@@ -103,6 +122,7 @@ The author would like to thank the shoulders of the following giants, whose code
 The author would also like to thank the following reviwers for identifying various bugs, typos, and other improvements:
 
 * Satoshi Tanda -- https://github.com/tandasat
-* Daniel Martin --
+* Daniel Martin -- https://github.com/fizbin
 * Thomas Fabber -- https://github.com/ThFabba
 * Cameron Gutman -- https://github.com/cgutman
+* Ilfak Guilfanov -- https://twitter.com/ilfak
