@@ -37,6 +37,7 @@ XzDecode (
 ~~~
 
 ~~~ c
+/*!
  * @brief          Returns if the last call to XzDecode resulted in an integrity
  *                 error.
  *
