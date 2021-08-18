@@ -1,5 +1,9 @@
 ﻿#pragma once
 
+#if defined (__cplusplus)
+extern "C" {
+#endif
+
 /*!
  * @brief          Decompresses an XZ stream from InputBuffer into OutputBuffer.
  *
@@ -45,3 +49,7 @@ bool
 XzChecksumError (
     void
     );
+
+#if defined (__cplusplus)
+}
+#endif
