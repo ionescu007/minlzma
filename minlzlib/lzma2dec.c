@@ -108,7 +108,7 @@ Lz2DecodeStream (
         if (controlByte.u.Common.IsLzma == 1)
         {
             rawSize = controlByte.u.Lzma.RawSize << 16;
-            compressedSize = inBytes[2] << 8;
+            compressedSize = (uint16_t)(inBytes[2] << 8);
             compressedSize += inBytes[3] + 1;
         }
         else

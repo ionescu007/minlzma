@@ -292,7 +292,7 @@ RcGetBitTree (
     //
     for (symbol = 1; symbol < Limit; )
     {
-        symbol = (symbol << 1) | RcIsBitSet(&BitModel[symbol]);
+        symbol = (uint16_t)(symbol << 1) | RcIsBitSet(&BitModel[symbol]);
     }
     return (symbol - Limit) & 0xFF;
 }
@@ -315,7 +315,7 @@ RcGetReverseBitTree (
     for (i = 0, symbol = 1, result = 0; i < HighestBit; i++)
     {
         bit = RcIsBitSet(&BitModel[symbol]);
-        symbol = (symbol << 1) | bit;
+        symbol = (uint16_t)(symbol << 1) | bit;
         result |= bit << i;
     }
     return result;
@@ -348,13 +348,13 @@ RcDecodeMatchedBitTree (
         matchBit = (bytePos >> 7) & 1;
 
         bit = RcIsBitSet(&BitModel[symbol + (0x100 * (matchBit + 1))]);
-        symbol = (symbol << 1) | bit;
+        symbol = (uint16_t)(symbol << 1) | bit;
 
         if (matchBit != bit)
         {
             while (symbol < 0x100)
             {
-                symbol = (symbol << 1) | RcIsBitSet(&BitModel[symbol]);
+                symbol = (uint16_t)(symbol << 1) | RcIsBitSet(&BitModel[symbol]);
             }
             break;
         }
